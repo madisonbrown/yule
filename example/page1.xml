@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<container size="100% 100%" padding="10px" spacing="5px 5px" stack="top">
+	<container size="100% *" stack="left">
+		<container size="50px 50px" style="background-color:green;" render="true"/>
+		<container size="fill fill" element="header" class="header" />
+		<container size="50px 50px" style="background-color:blue;" render="true" />
+	</container>
+	<container size="fill fill" stack="left">
+		<container size="fill fill" stack="bottom" element="leftcolumn" class="leftcolumn" />
+		<container size="40% fill">
+			<container size="50px 50px" align="left top" element="box1" class="box" />
+			<container size="50px 50px" align="left center" element="box2" class="box" />
+			<container size="50px 50px" align="left bottom" element="box3" class="box" />
+			<container size="50px 50px" align="center top" element="box4" class="box" />
+			<container size="10% 10%" align="center center" element="box5" class="box" />
+			<container size="50px 50px" align="center bottom" element="box6" class="box" />
+			<container size="50px 50px" align="right top" element="box7" class="box" />
+			<container size="50px 50px" align="right center" element="box8" class="box" />
+			<container size="50px 50px" align="right bottom" element="box9" class="box" />
+		</container>
+		<container size="fill fill" element="rightcolumn" class="rightcolumn" />
+	</container>
+	<container size="fill 50px" element="footer" class="footer" />
+</container>

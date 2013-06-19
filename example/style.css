@@ -1,0 +1,39 @@
+/* CSS Document */
+body
+{
+	font-family:Arial, Helvetica, sans-serif;
+	font-weight:bold;
+}
+.header
+{
+	background-color:yellow;
+	text-align:center;
+	font-size:24px;
+}
+.leftcolumn
+{
+	background-color:blue;
+	color:white;
+	text-align:justify;
+	font-size:36px;
+}
+.box
+{
+	background-color:purple;
+	color:white;
+	text-align:center;
+}
+.rightcolumn
+{
+	background-color:red;
+	color:white;
+	text-align:justify;
+	font-size:72px;
+}
+.footer
+{
+	background-color:green;
+	color:white;
+	text-align:center;
+	font-size:18px;
+}
