@@ -30,7 +30,7 @@ With CSS came the concept of separation of content and style. The concept behind
 This means that users who wish to view a plain-HTML version of a page structured by yule, such as the visually impaired or those who have chosen to disable javascript within their browser, may still do so.
 
 
-<b>What do I use it?</b>
+<b>How do I use it?</b>
 A yule XML layout is composed of only one type of element, referred to as a container, which is specified using the \<container> tag and contains any of the following attributes:
 
     <container>
