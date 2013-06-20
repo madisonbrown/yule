@@ -27,10 +27,10 @@ With CSS came the concept of separation of content and style. The concept behind
 2. An XML file specifying how that content should be arranged on the page.
 3. A CSS stylesheet specifying superficial styling (colors, fonts, transparency, etc.)
 
-This means that users who wish to view a plain-HTML version of a page structured by yule, such as the disabled or those who have chosen to disable javascript within their browser, may still do so.
+This means that users who wish to view a plain-HTML version of a page structured by yule, such as the visually impaired or those who have chosen to disable javascript within their browser, may still do so.
 
 
-<b>What is the format?</b>
+<b>What do I use it?</b>
 A yule XML layout is composed of only one type of element, referred to as a container, which is specified using the \<container> tag and contains any of the following attributes:
 
     <container>
@@ -49,39 +49,41 @@ A yule XML layout is composed of only one type of element, referred to as a cont
 
         stack="(top|bottom|left|right)"
 
-        spacing="(px) &(px)" //horizontal vertical
+        spacing="(px|%)"
 
         element="{id}"
 
         render="(true|false)"
 
+        class="{CSS class name}"
+
         style="{CSS style string}"
 
     </container>
 
-By default, a container is aligned at the top-left corner of its parent, at size (0px, 0px), with no offset, margins or padding, or stacking or spacing.
+By default, a container is aligned at the top-left corner of its parent, at zero width and height, with no offset, margins or padding, or stacking or spacing.
 
 The size of a container can be set in four ways:
 
-1. Absolutely, in pixels 
-2. Relatively, by percent
-3. To fill any available space in its parent container
-4. To expand to fit its contents
+1. Absolutely, in pixels. Includes padding.
+2. Relatively, by percent. Includes padding and margins, relative to inner size of parent.
+3. To expand to fill any available space in its parent container.
+4. To expand to fit its contents.
 
 The width and height are independent, meaning that they can each be set to any of these types.
 
-Margins and padding work in the same way as in CSS, except that in yule, the padding does not affect the size of the container. Rather, it affects the size of the child containers, if those containers are not sized absolutely (as it should be). Given a container, its margin will be relative to its parent container size, while its padding will be relative to its own size (if specified by percent).
+Margins and padding work in the same way as in CSS, except that in yule, the padding does not affect the size of the container. Rather, it affects the size of the child containers, if those containers are not sized absolutely. Given any container, its margin will be relative to its parent container size, while its padding will be relative to its own size (if specified by percent). Note, however, that a container set to fit to its content cannot specify padding by percent. 
 
 Any container may be aligned within any other container left/center/right, top/center/bottom.
 
 If multiple children are added to the same container, they will not affect eachother's positioning (meaning they may overlap), unless the 'stack' attribute is set on the parent container, in which case each child will be rendered one-after-another such that they do not overlap. A container may stack its children horizontally or vertically, starting from any of its sides.
 
-A container may also specify the spacing between its children, overriding their margins such that they will be spaced evenly apart.
+A container may also specify the spacing between its children, easily allowing them to be spaced evenly apart.
 
 If multiple children within a stacking container are set to fill in the same direction, they will split the available space evenly.
 
 The 'element' attribute is used to arrange the HTML content within the XML structure. If it is set to the id of any object in the body of the HTML file, that HTML object will be linked to the container.
 
-By default, containers are not rendered to the screen (meaning they not produce any HTML DOM Object). Rather, yule arranges the HTML elements they are linked to within the document, as if those elements were contained by the specified containers. However, a container that is not linked to any existing element may be rendered anyway by setting its 'render' attribute to 'true'. In this case, yule will add a \<div> element to the HTML document which represents the container, and the id of the container will be transferred to this \<div> so that it can be referenced later.
+By default, containers are not rendered to the screen (meaning they do not produce any HTML DOM Object). Rather, yule arranges within the document the HTML elements they are linked to directly. However, a container that is not linked to any existing element may be rendered anyway by setting its 'render' attribute to 'true'. In this case, yule will add a \<div> element to the HTML document which represents the container, and the id of the container will be transferred to this \<div> so that it can be referenced later.
 
-Finally, CSS style strings specified within the 'style' attribute will be applied to the linked HTML objects, though any CSS attribute that would affect the position of that object will be overriden. CSS may also be applied within the HTML document using a stylesheet.
+Finally, CSS style strings specified within the 'style' attribute, as well as CSS classes specified using the 'class' attribte, will be applied to the linked HTML objects, though any CSS attribute that would affect the position of that object will be overriden. CSS may also be applied within the HTML document using a stylesheet. THis allows separate, basic styling to be applied to the document in the case that javascript is disabled.

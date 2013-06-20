@@ -7,8 +7,7 @@
  *
  * Date: 06-20-2013
  */
-
-//fix: typed comparisons (===)
+ 
 function Yule(){};
 
 Yule.XMLHelper = function(){};
@@ -480,41 +479,35 @@ Yule.Vector.prototype.get = function(dimension){
 		return null;
 };
 Yule.Vector.prototype.getValue = function(dimension){
-	if (dimension == "x")
-		return this.x.value;
-	else if (dimension == "y")
-		return this.y.value;
+	var d = this.get(dimension);
+	if (d != null)
+		return d.value;
 	else
 		return 0;
 };
 Yule.Vector.prototype.getType = function(dimension){
-	if (dimension == "x")
-		return this.x.type;
-	else if (dimension == "y")
-		return this.y.type;
+	var d = this.get(dimension);
+	if (d != null)
+		return d.type;
 	else
 		return null;
 };
 Yule.Vector.prototype.setValue = function(dimension, value){
-	if (dimension == "x")
-		this.x.value = value;
-	else if (dimension == "y")
-		this.y.value = value;
+	var d = this.get(dimension);
+	if (d != null)
+		d.value = value;
 };
 Yule.Vector.prototype.setType = function(dimension, type){
+	var d = this.get(dimension);
 	if (type == "px" || type == "%" || type == "fill")
 	{
-		if (dimension == "x")
-			this.x.type = type;
-		else if (dimension == "y")
-			this.y.type = type;
+		if (d != null)
+			d.type = type;
 	}
 	else
 	{
-		if (dimesion == "x")
-			this.x.type = null;
-		else if (dimension == "y")
-			this.y.type = null;
+		if (d != null)
+			d.type = null;
 	}
 };
 Yule.Vector.prototype.toAbs = function(dimension, refContainer, inner){
@@ -536,90 +529,31 @@ Yule.EdgeSet = function(){
 		var edgeSet = new Yule.EdgeSet();
 		if (data != null)
 		{
-			function parseEntry(data, destValue, destType){
-				var pattern = /[^0-9]/;
-				var match = pattern.exec(data);
-				destValue = parseFloat(data.slice(0, match.index));
-				var type = data.slice(match.index);
-				if (type == "px" || type == "%")
-					destType = type;
-				else
-					destType = null;
-			}
-			
 			var values = data.split(" ");
+			var types = ["px", "%"];
 			if (values.length == 1)
 			{
-				var pattern = /[^0-9]/;
-				
-				var match = pattern.exec(values[0]);
-				if (match != null)
-				{
-					edgeSet.t = edgeSet.r = edgeSet.b = edgeSet.l = parseFloat(values[0].slice(0, match.index));
-					var type = values[0].slice(match.index);
-					if (type == "px" || type == "%")
-						edgeSet.typeT = edgeSet.typeR = edgeSet.typeB = edgeSet.typeL = type;
-					else
-						edgeSet.typeT = edgeSet.typeR = edgeSet.typeB = edgeSet.typeL = null;
-				}
+				edgeSet.t = edgeSet.r = edgeSet.b = edgeSet.l = Yule.Dim.parse(values[0], types);
 			}
 			else if (values.length == 4)
 			{
-				var pattern = /[^0-9]/;
 				
-				var match = pattern.exec(values[0]);
-				if (match != null)
-				{
-					edgeSet.t = parseFloat(values[0].slice(0, match.index));
-					var type = values[0].slice(match.index);
-					if (type == "px" || type == "%")
-						edgeSet.typeT = type;
-					else
-						edgeSet.typeT = null;
-				}
-
-				var match = pattern.exec(values[1]);
-				if (match != null)
-				{
-					edgeSet.r = parseFloat(values[1].slice(0, match.index));
-					var type = values[1].slice(match.index);
-					if (type == "px" || type == "%")
-						edgeSet.typeR = type;
-					else
-						edgeSet.typeR = null;
-				}
-					
-				var match = pattern.exec(values[2]);
-				if (match != null)
-				{
-					edgeSet.b = parseFloat(values[2].slice(0, match.index));
-					var type = values[2].slice(match.index);
-					if (type == "px" || type == "%")
-						edgeSet.typeB = type;
-					else
-						edgeSet.typeB = null;
-				}
-					
-				var match = pattern.exec(values[3]);
-				if (match != null)
-				{
-					edgeSet.l = parseFloat(values[3].slice(0, match.index));
-					var type = values[3].slice(match.index);
-					if (type == "px" || type == "%")
-						edgeSet.typeL = type;
-					else
-						edgeSet.typeL = null;
-				}
+				edgeSet.t = Yule.Dim.parse(values[0], types);
+				edgeSet.r = Yule.Dim.parse(values[1], types);
+				edgeSet.b = Yule.Dim.parse(values[2], types);
+				edgeSet.l = Yule.Dim.parse(values[3], types);
 			}
 		}
 		
 		return edgeSet;
 	};
 	
-	this.t = this.r = this.b = this.l = 0;
-	this.typeT = this.typeR = this.typeB = this.typeL = "px";
+	this.t = new Yule.Dim(0, "px");
+	this.r = new Yule.Dim(0, "px");
+	this.b = new Yule.Dim(0, "px");
+	this.l = new Yule.Dim(0, "px");
 };
-Yule.EdgeSet.prototype.getValue = function(dimension, post){
+Yule.EdgeSet.prototype.get = function(dimension, post){
 	if (dimension == "x")
 	{
 		if (post)
@@ -635,77 +569,52 @@ Yule.EdgeSet.prototype.getValue = function(dimension, post){
 			return this.t;
 	}
 	else
+		return null;
+};
+Yule.EdgeSet.prototype.getValue = function(dimension, post){
+	var d = this.get(dimension, post);
+	if (d != null)
+		return d.value;
+	else
 		return 0;
 };
 Yule.EdgeSet.prototype.getType = function(dimension, post){
-	if (dimension == "x")
-	{
-		if (post)
-			return this.typeR;
-		else
-			return this.typeL;
-	}
-	else if (dimension == "y")
-	{
-		if (post)
-			return this.typeB;
-		else
-			return this.typeT;
-	}
+	var d = this.get(dimension, post);
+	if (d != null)
+		return d.type;
 	else
 		return null;
 };
 Yule.EdgeSet.prototype.setValue = function(dimension, post, value){
-	if (dimension == "x")
-	{
-		if (post)
-			this.r = value;
-		else
-			this.l = value;
-	}
-	else if (dimension == "y")
-	{
-		if (post)
-			this.b = value;
-		else
-			this.t = value;
-	}
+	var d = this.get(dimension, post);
+	if (d != null)
+		d.value = value;
 };
 Yule.EdgeSet.prototype.setType = function(dimension, post, type){
+	var d = this.get(dimension);
 	if (type == "px" || type == "%")
 	{
-		if (dimension == "x")
-		{
-			if (post)
-				this.typeR = type;
-			else
-				this.typeL = type;
-		}
-		else if (dimension == "y")
-		{
-			if (post)
-				this.typeB = type;
-			else
-				this.typeT = type;
-		}
+		if (d != null)
+			d.type = type;
+	}
+	else
+	{
+		if (d != null)
+			d.type = null;
 	}
 };
 Yule.EdgeSet.prototype.toAbs = function(dimension, post, refContainer, inner){
+	var reference = 0;
 	var type = this.getType(dimension, post);
-	if (type == "px")
-		return this.getValue(dimension, post);
-	else if (type == "%" && refContainer != null)
+	if (type == "%" && refContainer != null)
 	{
-		var reference = 0;
 		if (inner)
 			reference = refContainer.innerSize(dimension);
 		else
 			reference = refContainer.aSize(dimension);
-		
-		return Math.round(reference * this.getValue(dimension, post) / 100);
 	}
-	else
-		return 0;
+	
+	return this.get(dimension, post).toAbs(reference);
 };
 Yule.EdgeSet.prototype.sumToAbs = function(dimension, refContainer, inner){
 	return this.toAbs(dimension, false, refContainer, inner) + this.toAbs(dimension, true, refContainer, inner);

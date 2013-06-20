@@ -20,7 +20,7 @@
   
   <body onresize="page.render();">
       <div id="header">the two squares on either side consume 50px width. this header fills the remaining width.</div>
-      <div id="leftcolumn">the center column consmes 40% of the availble width in this container. this column consumes half of the remaining width.</div>
+      <div id="leftcolumn">the center column consmes 40% of the availble width in this container. this column consumes half of the remaining width/height.</div>
       <div id="box1">align</div>
       <div id="box2">align</div>
       <div id="box3">align</div>
@@ -31,11 +31,11 @@
       <div id="box8">align</div>
       <div id="box9">align</div>
       <div id="rightcolumn">and this column consumes the other half</div>
-      <div id="footer">this footer, along with the header, consume a total of 100px height. the center columns fill the remaining height.</div>
+      <div id="footer">this footer shrink wraps in both directions. the center columns fill the remaining height, minus the header height.</div>
       
       <div id="remove">
-          <input type="button" value="click to inflate" onclick="init();"/>
-          <p><a href="page1.xml">view xml</a></p>
+        <input type="button" value="click to inflate" onclick="init();"/>
+        <p><a href="page1.xml">view xml</a></p>
       </div>
   </body>
   
