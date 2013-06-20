@@ -1,14 +1,18 @@
+/*!
+ * yule JavaScript Library Beta v0.1
+ * https://github.com/madisonbrown/yule
+ *
+ * Copyright 2013 by Madison Brown
+ * Released under the MIT license
+ *
+ * Date: 06-20-2013
+ */
+
+//fix: typed comparisons (===)
 function Yule(){};
-Yule.inflate = function(xmlFile, window){
-	var page = new Yule.Page(window);
-	page.build(Yule.XML.parse(xmlFile));
-	
-	return page;
-};
 
-
-Yule.XML = function(){};
-Yule.XML.parse = function(xmlFile){
+Yule.XMLHelper = function(){};
+Yule.XMLHelper.parse = function(xmlFile){
 	var xmlhttp = new XMLHttpRequest();
 	xmlhttp.open("GET", xmlFile, false);
 	xmlhttp.send();
@@ -20,20 +24,23 @@ Yule.Page = function(window){
 	this.window = window;
 	this.shell = new Yule.Container();
 };
+Yule.Page.prototype.inflate = function(xmlFile){
+	page.build(Yule.XMLHelper.parse(xmlFile));
+};
 Yule.Page.prototype.build = function(xmlDoc){
 	this.shell.id = "shell";
 	this.shell.build(xmlDoc.childNodes, this.window);
 };
 Yule.Page.prototype.render = function(){	
 	this.shell.size = new Yule.Vector().set(
-		parseFloat(this.window.innerWidth),
-		parseFloat(this.window.innerHeight),
-		"px", "px");
+		new Yule.Dim(parseFloat(this.window.innerWidth), "px"),
+		new Yule.Dim(parseFloat(this.window.innerHeight), "px"));
 	this.shell.reset();
 	this.shell.render();
 };
 
 Yule.Container = function(){
+	var _parent = this;
 	Yule.Container.StackManager = function(stackStyle){
 		this.stack = [];
 		this.stackStyle = stackStyle;
@@ -54,11 +61,17 @@ Yule.Container = function(){
 		var aSize = 0;
 		if (this.isParallel(dimension))
 		{
+			var spacing = _parent.spacing.toAbs(_parent, true);
 			for (var i = 0; i < this.stack.length; i++)
+			{
 				if (this.stack[i].size.getType(dimension) != "fill")
 					aSize += this.stack[i].outerSize(dimension);
 				else
-					aSize += this.stack[i].margin.sumToAbs(dimension, this.stack[i].parent, true);
+					aSize += this.stack[i].margin.sumToAbs(dimension, _parent, true);
+					
+				if (i < this.stack.length - 1)
+					aSize += spacing
+			}
 		}
 		else
 		{
@@ -73,7 +86,7 @@ Yule.Container = function(){
 				}
 				else
 				{
-					var childSize = this.stack[i].margin.sumToAbs(dimension, this.stack[i].parent, true);
+					var childSize = this.stack[i].margin.sumToAbs(dimension, _parent, true);
 					if (childSize > aSize)
 						aSize += childSize;
 				}
@@ -101,18 +114,19 @@ Yule.Container = function(){
 		var offset = 0;
 		if (this.isParallel(dimension))
 		{
+			var spacing = _parent.spacing.toAbs(dimension, _parent, true);
 			var vertical = this.isVertical();
 			if (vertical && this.stackStyle.style == "top" || !vertical && this.stackStyle.style == "left")
 			{
 				var i = 0;
-				while (i < this.stack.length && this.stack[i] != container)
-					offset += this.stack[i++].outerSize(dimension);
+				while (i < this.stack.length && this.stack[i] !== container)
+					offset += this.stack[i++].outerSize(dimension) + spacing;
 			}
 			else
 			{
 				var i = this.stack.length - 1;
-				while (i >= 0 && this.stack[i] != container)
-					offset += this.stack[i--].outerSize(dimension);
+				while (i >= 0 && this.stack[i] !== container)
+					offset += this.stack[i--].outerSize(dimension) + spacing;
 			}
 		}
 		
@@ -120,7 +134,7 @@ Yule.Container = function(){
 	};
 	Yule.Container.StackManager.prototype.indexOf = function(container){
 		var i = 0;
-		while (i < this.stack.length && this.stack[i] != container)
+		while (i < this.stack.length && this.stack[i] !== container)
 			i++;
 			
 		return i;
@@ -131,7 +145,7 @@ Yule.Container = function(){
 	this.size = new Yule.Vector();
 	this.margin = new Yule.EdgeSet();
 	this.padding = new Yule.EdgeSet();
-	this.spacing = new Yule.Vector();
+	this.spacing = new Yule.Dim();
 	this.stack = new Yule.StackStyle();
 	this.align = new Yule.AlignStyle();
 	this.element = null;
@@ -149,30 +163,46 @@ Yule.Container.prototype.isStacking = function(dimension){
 	return (this.stackManager.stackStyle.style != null && this.stackManager.isParallel(dimension));
 };
 Yule.Container.prototype.addChild = function(container){
+	if (container.parent != null)
+		container.parent.removeChild(container);
 	container.parent = this;
+	
 	if (this.stack.style != null)
 		this.stackManager.register(container);
+	
 	this.children[this.children.length] = container;
 };
+Yule.Container.prototype.removeChild = function(container){
+	for (var i = 0; i < this.children; i++)
+		if (this.children[i] === container)
+			this.children.splice(i, 1);
+	
+	container.parent = null;
+};
 Yule.Container.prototype.aSize = function(dimension){
-	if (this._sizeActive.getValue(dimension) == false)
+	if (this._sizeActive.getValue(dimension) == false) //prevent infinite loop
 	{
-		if (this._aSize.getValue(dimension) == null) //Check to see if aSize has already been calculated this render cycle.
+		if (this._aSize.getValue(dimension) == null) //check to see if aSize has already been calculated this render cycle
 		{
 			this._sizeActive.setValue(dimension, true);
 			
 			var aSize = 0;
-			var sizeType = this.size.getType(dimension); //Get the type of this containers specified size.
 			
+			var sizeType = this.size.getType(dimension); //Get the type of this containers specified size.
 			if (sizeType == "px" || sizeType == "%")
+			{
 				aSize = this.size.toAbs(dimension, this.parent, true);
+				
+				if(sizeType == "%") //If specified size is percent, then size includes this containers margins.
+					aSize -= this.margin.sumToAbs(dimension, this.parent, true);
+			}
 			else if (sizeType == "fill" && this.parent != null)
 			{
 				var fillers = this.parent.stackManager.fillers(dimension);
 				if (fillers > 0) //If this container is filling a stack:
 				{
 					//aSize equals the free space of the parent divided by the number of fillers in the stack, adjusted for non-integer results.
-					var unrounded = this.parent.freeSpace(dimension) / fillers - this.offset.toAbs(dimension, this.parent, true);
+					var unrounded = this.parent.freeSpace(dimension) / fillers; //FIX: take into account offset.
 					aSize = Math.floor(unrounded);
 					if (unrounded - aSize != 0 && this.parent.stackManager.indexOf(this) == Math.round((this.parent.stackManager.stack.length - 1) / 2))
 						aSize++;
@@ -182,7 +212,7 @@ Yule.Container.prototype.aSize = function(dimension){
 			}
 			else if (sizeType == null) //If the type of this containers specified size is undefined, it should expand to fit its contents:
 			{
-				//At minimum, aSize of this containers will equal its padding, relative to itself (in case of %). 
+				//At minimum, aSize of this container will equal its padding, relative to itself (in case of %). 
 				aSize = this.padding.sumToAbs(dimension, this, false); 
 				
 				if (this.isStacking(dimension)) //If this container is stacking:
@@ -198,6 +228,28 @@ Yule.Container.prototype.aSize = function(dimension){
 								aSize += childSize;
 						}
 					}
+				
+
+				if (this.domObject != null) //Now check to see if the domObjects content will fit...
+				{
+					if (!this._presizing && !this._rendering && !this._rendered) //make sure the domObjects dimensions are set in the correct order
+						this.presizeDomObject();
+						
+					var dSize = 0;
+					if (dimension == "x")
+						dSize = this.domObject.offsetWidth;
+					else if (dimension == "y")
+						dSize = this.domObject.offsetHeight;
+					
+					var maximum = this.parent.freeSpace(dimension) - this.margin.sumToAbs(dimension, this.parent, true);
+					if (aSize < dSize)
+					{
+						if(dSize < maximum) //and dont exceed available space within the parent.
+							aSize = dSize;
+						else
+							aSize = maximum;
+					}
+				}
 			}
 			
 			this._aSize.setValue(dimension, aSize);
@@ -254,99 +306,143 @@ Yule.Container.prototype.aPosition = function(dimension){
 		return 0;
 };
 Yule.Container.prototype.freeSpace = function(dimension){
-	if (dimension == "x" || dimension == "y")
+	if (this.stackManager.isParallel(dimension))
 		return this.innerSize(dimension) - this.stackManager.aSize(dimension);
 	else
-		return 0;
+		return this.innerSize(dimension);
 };
-Yule.Container.prototype.build = function(nodes, window){
-	function applySpacing(container, spacing){
-		function applyPadding(container, value, dimension){
-			function applyMargin(container){
-				if (container.children.length == 0 || container.stack.style == null)
-				{
-					container.margin.setValue(dimension, false, s);
-					container.margin.setValue(dimension, true, s);
-				}
-				else
-					for (var i = 0; i < container.children.length; i++)
-						applyMargin(container.children[i]);
-			}
-			
-			var s = Math.floor(value / 2);
-			if (s > 0)
-			{
-				container.padding.setValue(dimension, false, s + container.padding.getValue(dimension, false));
-				container.padding.setValue(dimension, true, s + container.padding.getValue(dimension, true));
-				
-				applyMargin(container);
-			}
-		}
-		
-		applyPadding(container, spacing.getValue("x"), "x");
-		applyPadding(container, spacing.getValue("y"), "y");
-	}
-	
+Yule.Container.prototype.build = function(nodes, window){	
 	for (var i = 0; i < nodes.length; i++)
 	{
 		if (nodes[i].tagName == "container")
 		{
 			var container = new Yule.Container();
+			
 			container.id = nodes[i].getAttribute("id");
 			container.offset = Yule.Vector.parse(nodes[i].getAttribute("offset"));
 			container.size = Yule.Vector.parse(nodes[i].getAttribute("size"));
 			container.margin = Yule.EdgeSet.parse(nodes[i].getAttribute("margin"));
 			container.padding = Yule.EdgeSet.parse(nodes[i].getAttribute("padding"));
-			container.spacing = Yule.Vector.parse(nodes[i].getAttribute("spacing"));
+			container.spacing = Yule.Dim.parse(nodes[i].getAttribute("spacing"), ["px", "%"]);
 			container.stack = Yule.StackStyle.parse(nodes[i].getAttribute("stack"));
-			container.stackManager = new Yule.Container.StackManager(container.stack); //FIX
 			container.align = Yule.AlignStyle.parse(nodes[i].getAttribute("align"));
 			container.element = nodes[i].getAttribute("element");
 			container.className = nodes[i].getAttribute("class");
 			container.isRender = nodes[i].getAttribute("render");
 			container.style = nodes[i].getAttribute("style");
 			
+			container.stackManager = new Yule.Container.StackManager(container.stack);
+			
 			if (container.element != null)
 				container.domObject = window.document.getElementById(container.element);
 			else if (container.isRender == "true")
 			{
 				container.domObject = window.document.createElement("div");
+				container.domObject.style.zIndex = 0;
 				container.domObject.id = container.id;
-				window.document.body.appendChild(container.domObject);
+				window.document.body.insertBefore(container.domObject, document.body.firstChild);
+			}
+			if (container.domObject != null)
+			{
+				container.domObject.className = container.className;
+				container.domObject.style.cssText = container.style;
+				container.domObject.style.position = "absolute";
+				container.domObject.style.overflow = "hidden";
+				container.domObject.style.padding = container.padding.toString(null, true);
 			}
 			
 			this.addChild(container.build(nodes[i].childNodes, window));
-			
-			applySpacing(this, this.spacing);
 		}
 	}
 	
 	return this;
 };
 Yule.Container.prototype.render = function(){
+	this._rendering = true;
+	
 	if (this.domObject != null)
 	{
-		this.domObject.className = this.className;
-		this.domObject.style.cssText = this.style;
-		this.domObject.style.position = "absolute";
-		this.domObject.style.overflow = "hidden";
+		this.presizeDomObject();
+		this.postsizeDomObject();
 		this.domObject.style.left = this.aPosition("x") + "px";
 		this.domObject.style.top = this.aPosition("y") + "px";
-		this.domObject.style.width = this.aSize("x") + "px";
-		this.domObject.style.height = this.aSize("y") + "px";
+		this.domObject.style.visibility = "visible";
 	}
 	
 	for (var i = 0; i < this.children.length; i++)
 		this.children[i].render();
+	
+	this._rendering = false;
+	this._rendered = true;
+};
+Yule.Container.prototype.presizeDomObject = function(){
+	if (this.domObject != null)
+	{
+		this._presizing = true;
+		if (this.size.typeY == null)
+			this.domObject.style.width = this.innerSize("x") + "px";
+		else
+			this.domObject.style.height = this.innerSize("y") + "px";
+		this._presizing = false;
+	}
+};
+Yule.Container.prototype.postsizeDomObject = function(){
+	if (this.domObject != null)
+	{
+		if (this.size.typeY == null)
+			this.domObject.style.height = this.innerSize("y") + "px";
+		else
+			this.domObject.style.width = this.innerSize("x") + "px";
+	}
 };
 Yule.Container.prototype.reset = function(){
-	this._aSize = new Yule.Vector().set(null, null, "px", "px");
-	this._aPosition = new Yule.Vector().set(null, null, "px", "px");
-	this._sizeActive = new Yule.Vector().set(false, false, null, null);
-	this._positionActive = new Yule.Vector().set(false, false, null, null);
+	this._aSize = new Yule.Vector().set(new Yule.Dim(null, "px"), new Yule.Dim(null, "px"));
+	this._aPosition = new Yule.Vector().set(new Yule.Dim(null, "px"), new Yule.Dim(null, "px"));
+	this._sizeActive = new Yule.Vector().set(new Yule.Dim(false, "px"), new Yule.Dim(false, "px"));
+	this._positionActive = new Yule.Vector().set(new Yule.Dim(false, "px"), new Yule.Dim(false, "px"));
 	
+	if (this.domObject != null)
+	{
+		this.domObject.style.visibility = "hidden";
+		this.domObject.style.height = "";
+		this.domObject.style.width = "";
+	}
+		
 	for (var i = 0; i < this.children.length; i++)
 		this.children[i].reset();
+		
+	this._rendered = false;
+};
+
+Yule.Dim = function(value, type){
+	Yule.Dim.parse = function(data, types){
+		var dim = new Yule.Dim(0, null);
+		if (data != null)
+		{
+			var pattern = /[^0-9]/;
+			var match = pattern.exec(data);
+			if (match != null)
+			{
+				dim.value = parseFloat(data.slice(0, match.index));
+				var type = data.slice(match.index);
+				if (types.indexOf(type) > -1)
+					dim.type = type;
+			}
+		}
+		
+		return dim;
+	};
+	
+	this.value = value;
+	this.type = type;
+};
+Yule.Dim.prototype.toAbs = function(reference){
+	if (this.type == "px")
+		return this.value;
+	else if (this.type == "%")
+		return Math.round(reference * this.value / 100);
+	else
+		return 0;
 };
 
 Yule.Vector = function(){
@@ -357,96 +453,82 @@ Yule.Vector = function(){
 			var values = data.split(" ");
 			if (values.length == 2)
 			{
-				var pattern = /[^0-9]/;
-				
-				var match = pattern.exec(values[0]);
-				if (match != null)
-				{
-					vector.x = parseFloat(values[0].slice(0, match.index));
-					var typeX = values[0].slice(match.index);
-					if (typeX == "px" || typeX == "%" || typeX == "fill")
-						vector.typeX = typeX;
-					else
-						vector.typeX = null;
-				}
-	
-				var match = pattern.exec(values[1]);
-				if (match != null)
-				{
-					vector.y = parseFloat(values[1].slice(0, match.index));
-					var typeY = values[1].slice(match.index);
-					if (typeY == "px" || typeY == "%" || typeY == "fill")
-						vector.typeY = typeY;
-					else
-						vector.typeY = null;
-				}
+				var types = ["px", "%", "fill"];
+				vector.x = Yule.Dim.parse(values[0], types);
+				vector.y = Yule.Dim.parse(values[1], types);
 			}
 		}
 		
 		return vector;
 	};
 	
-	this.x = this.y = 0;
-	this.typeX = this.typeY = "px";
+	this.x = new Yule.Dim(0, "px");
+	this.y = new Yule.Dim(0, "px");
 };
-Yule.Vector.prototype.set = function(x, y, typeX, typeY){
+Yule.Vector.prototype.set = function(x, y){
 	this.x = x;
 	this.y = y;
-	this.typeX = typeX;
-	this.typeY = typeY;
 	
 	return this;
 };
-Yule.Vector.prototype.getValue = function(dimension){
+Yule.Vector.prototype.get = function(dimension){
 	if (dimension == "x")
 		return this.x;
 	else if (dimension == "y")
 		return this.y;
 	else
+		return null;
+};
+Yule.Vector.prototype.getValue = function(dimension){
+	if (dimension == "x")
+		return this.x.value;
+	else if (dimension == "y")
+		return this.y.value;
+	else
 		return 0;
 };
 Yule.Vector.prototype.getType = function(dimension){
 	if (dimension == "x")
-		return this.typeX;
+		return this.x.type;
 	else if (dimension == "y")
-		return this.typeY;
+		return this.y.type;
 	else
 		return null;
 };
 Yule.Vector.prototype.setValue = function(dimension, value){
 	if (dimension == "x")
-		this.x = value;
+		this.x.value = value;
 	else if (dimension == "y")
-		this.y = value;
+		this.y.value = value;
 };
 Yule.Vector.prototype.setType = function(dimension, type){
 	if (type == "px" || type == "%" || type == "fill")
+	{
 		if (dimension == "x")
-			this.typeX = type;
+			this.x.type = type;
 		else if (dimension == "y")
-			this.typeY = type;
+			this.y.type = type;
+	}
 	else
+	{
 		if (dimesion == "x")
-			this.typeX = null;
+			this.x.type = null;
 		else if (dimension == "y")
-			this.typeY = null;
+			this.y.type = null;
+	}
 };
 Yule.Vector.prototype.toAbs = function(dimension, refContainer, inner){
+	var reference = 0;
 	var type = this.getType(dimension);
-	if (type == "px")
-		return this.getValue(dimension);
-	else if (type == "%" && refContainer != null)
+	if (type == "%" && refContainer != null)
 	{
-		var reference = 0;
 		if (inner)
 			reference = refContainer.innerSize(dimension);
 		else
 			reference = refContainer.aSize(dimension);
-			
-		return Math.round(reference * this.getValue(dimension) / 100);
 	}
-	else
-		return 0;
+	
+	return this.get(dimension).toAbs(reference);
 };
 
 Yule.EdgeSet = function(){
@@ -628,6 +710,14 @@ Yule.EdgeSet.prototype.toAbs = function(dimension, post, refContainer, inner){
 Yule.EdgeSet.prototype.sumToAbs = function(dimension, refContainer, inner){
 	return this.toAbs(dimension, false, refContainer, inner) + this.toAbs(dimension, true, refContainer, inner);
 };
+Yule.EdgeSet.prototype.toString = function(refContainer, inner){
+	var t = this.toAbs("y", false, refContainer, inner);
+	var r = this.toAbs("x", true, refContainer, inner);
+	var b = this.toAbs("y", true, refContainer, inner);
+	var l = this.toAbs("x", false, refContainer, inner);
+	
+	return t + "px" + " " + r + "px" + " " + b + "px" + " " + l + "px";
+};
 
 Yule.StackStyle = function(){
 	Yule.StackStyle.parse = function(data){
@@ -668,3 +758,14 @@ Yule.AlignStyle.prototype.getStyle = function(dimension){
 	else if (dimension == "y")
 		return this.v;
 };
+
+if(!Array.prototype.indexOf) {
+    Array.prototype.indexOf = function(needle) {
+        for(var i = 0; i < this.length; i++) {
+            if(this[i] === needle) {
+                return i;
+            }
+        }
+        return -1;
+    };
+}
