@@ -7,7 +7,6 @@ body
 .header
 {
 	background-color:yellow;
-	text-align:center;
 	font-size:24px;
 }
 .leftcolumn
@@ -21,7 +20,6 @@ body
 {
 	background-color:purple;
 	color:white;
-	text-align:center;
 }
 .rightcolumn
 {
@@ -34,6 +32,5 @@ body
 {
 	background-color:green;
 	color:white;
-	text-align:center;
 	font-size:18px;
 }

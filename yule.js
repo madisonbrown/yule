@@ -147,10 +147,13 @@ Yule.Container = function(){
 	this.spacing = new Yule.Dim();
 	this.stack = new Yule.StackStyle();
 	this.align = new Yule.AlignStyle();
+	this.contentAlign = new Yule.AlignStyle();
 	this.element = null;
 	this.className = null;
 	this.isRender = false;
 	this.style = null;
+	
+	this._relative = false;
 	
 	this.parent = null;
 	this.children = [];
@@ -210,46 +213,70 @@ Yule.Container.prototype.aSize = function(dimension){
 					aSize = this.parent.innerSize(dimension) - this.margin.sumToAbs(dimension, this.parent, true);
 			}
 			else if (sizeType == null) //If the type of this containers specified size is undefined, it should expand to fit its contents:
-			{
-				//At minimum, aSize of this container will equal its padding, relative to itself (in case of %). 
-				aSize = this.padding.sumToAbs(dimension, this, false); 
-				
+			{				
 				if (this.isStacking(dimension)) //If this container is stacking:
-					aSize += this.stackManager.aSize(dimension); //Get the size from the StackManager.
+					aSize = this.stackManager.aSize(dimension); //Get the size from the StackManager.
 				else
-					for (var i = 0; i < this.children.length; i++) //Otherwise, get the max size of the child containers.
+				{
+					//Otherwise, get the max size of the child containers.
+					var childMax = 0;
+					for (var i = 0; i < this.children.length; i++) 
 					{
 						var childType = this.children[i].size.getType(dimension);
 						if (childType == "px" || childType == null)
 						{
 							var childSize = this.children[i].outerSize(dimension);
-							if (childSize > aSize)
-								aSize += childSize;
+							if (childSize > childMax)
+								childMax = childSize;
 						}
 					}
-				
-
-				if (this.domObject != null) //Now check to see if the domObjects content will fit...
-				{
-					if (!this._presizing && !this._rendering && !this._rendered) //make sure the domObjects dimensions are set in the correct order
-						this.presizeDomObject();
-						
-					var dSize = 0;
-					if (dimension == "x")
-						dSize = this.domObject.offsetWidth;
-					else if (dimension == "y")
-						dSize = this.domObject.offsetHeight;
-					
-					var maximum = this.parent.freeSpace(dimension) - this.margin.sumToAbs(dimension, this.parent, true);
-					if (aSize < dSize)
-					{
-						if(dSize < maximum) //and dont exceed available space within the parent.
-							aSize = dSize;
-						else
-							aSize = maximum;
-					}
+					aSize = childMax;
 				}
+				
+				//Now check to see if the domObjects content will fit...
+				function fitToContent(container){
+					if (container.domObject != null) 
+					{				
+						//make sure the domObjects dimensions are set in the correct order
+						if (!container._presizing && !container._rendering && !container._rendered) 
+							container.presizeDomObject();
+							
+						var dSize = 0;
+						if (dimension == "x")
+							dSize = container.domObject.offsetWidth;
+						else if (dimension == "y")
+							dSize = container.domObject.offsetHeight;
+						
+						var refParent = container.parent;
+						var marpad = 0;
+						while (refParent.size.getType(dimension) == null & refParent.parent != null)
+						{
+							marpad += refParent.margin.sumToAbs(dimension, refParent.parent, true);
+							marpad += refParent.padding.sumToAbs(dimension, this, false);
+							refParent = refParent.parent;
+						}
+						
+						var maximum = refParent.freeSpace(dimension) - marpad - container.margin.sumToAbs(dimension, container.parent, true);
+						if (aSize < dSize)
+						{
+							if(dSize < maximum) //and dont exceed available space within the parent.
+								aSize = dSize;
+							else
+								aSize = maximum;
+						}
+					}
+					
+					for (var i = 0; i < container.children.length; i++)
+						fitToContent(container.children[i]);
+				}
+				fitToContent(this);
+				
+				//At minimum, aSize of this container will equal its padding, relative to itself (in case of %). 
+				aSize += this.padding.sumToAbs(dimension, this, false);
 			}
+			
+			if (aSize < 0)
+				aSize = 0;
 			
 			this._aSize.setValue(dimension, aSize);
 			this._sizeActive.setValue(dimension, false);
@@ -278,10 +305,14 @@ Yule.Container.prototype.aPosition = function(dimension){
 				
 			if (this.parent != null)//If this container has a parent:
 			{
-				//It will be further offset by its parent's aPosition as well as its parent's top-left padding.
-				aPos += this.parent.aPosition(dimension) + this.parent.padding.toAbs(dimension, false, this.parent, false);
+				//It will be further offset by its parent's aPosition...
+				if (!this._relative)
+					aPos += this.parent.aPosition(dimension)
 				
-				//Additionally, if this container is part of a stack, it will be further offset by that stack.
+				//as well as its parent's top-left padding.
+				aPos += this.parent.padding.toAbs(dimension, false, this.parent, false);
+				
+				//Additionally, if this container is part of a stack, it will be offset by that stack.
 				if (this.parent.isStacking(dimension))
 					aPos += this.parent.stackManager.offsetOf(this, dimension);
 				else
@@ -294,7 +325,10 @@ Yule.Container.prototype.aPosition = function(dimension){
 						aPos += this.parent.innerSize(dimension) - this.outerSize(dimension);
 				}
 			}
-				
+			
+			if (this._relative && aPos < 0)
+				aPos = 0;
+			
 			this._aPosition.setValue(dimension, aPos);
 			this._positionActive.setValue(dimension, false);
 		}
@@ -325,6 +359,7 @@ Yule.Container.prototype.build = function(nodes, window){
 			container.spacing = Yule.Dim.parse(nodes[i].getAttribute("spacing"), ["px", "%"]);
 			container.stack = Yule.StackStyle.parse(nodes[i].getAttribute("stack"));
 			container.align = Yule.AlignStyle.parse(nodes[i].getAttribute("align"));
+			container.contentAlign = Yule.AlignStyle.parse(nodes[i].getAttribute("contentAlign"));
 			container.element = nodes[i].getAttribute("element");
 			container.className = nodes[i].getAttribute("class");
 			container.isRender = nodes[i].getAttribute("render");
@@ -333,21 +368,51 @@ Yule.Container.prototype.build = function(nodes, window){
 			container.stackManager = new Yule.Container.StackManager(container.stack);
 			
 			if (container.element != null)
+			{
 				container.domObject = window.document.getElementById(container.element);
+				container.domObject.className = container.className;
+				container.domObject.style.cssText = container.style;
+				container.domObject.style.position = "absolute";
+				
+				//If the linked domObject contains content, and that content is set to align:
+				if (container.domObject.innerHTML != "")
+				{
+					var content = new Yule.Container();
+					
+					content.id = container.id + "_content";
+					content.size = new Yule.Vector().set(new Yule.Dim(null, null), new Yule.Dim(null, null));
+					content.align = container.contentAlign;
+					content._relative = true;
+					
+					content.domObject = window.document.createElement("div");
+					content.domObject.id = container.id;
+					content.domObject.style.position = "relative";
+					content.domObject.style.overflow = "hidden";
+					//content.domObject.style.border = "solid 1px";
+					if (content.align.h == "left")
+						content.domObject.style.textAlign = "left";
+					else if (content.align.h == "center")
+						content.domObject.style.textAlign = "center";
+					else if (content.align.h == "right")
+						content.domObject.style.textAlign = "right";
+					content.domObject.innerHTML = container.domObject.innerHTML;
+					
+					container.domObject.innerHTML = "";
+					container.domObject.appendChild(content.domObject);
+					//window.document.body.insertBefore(content.domObject, container.domObject.nextSibling);
+					
+					container.addChild(content);
+				}
+			}
 			else if (container.isRender == "true")
 			{
 				container.domObject = window.document.createElement("div");
 				container.domObject.style.zIndex = 0;
 				container.domObject.id = container.id;
-				window.document.body.insertBefore(container.domObject, document.body.firstChild);
-			}
-			if (container.domObject != null)
-			{
 				container.domObject.className = container.className;
 				container.domObject.style.cssText = container.style;
 				container.domObject.style.position = "absolute";
-				container.domObject.style.overflow = "hidden";
-				container.domObject.style.padding = container.padding.toString(null, true);
+				window.document.body.insertBefore(container.domObject, document.body.firstChild);
 			}
 			
 			this.addChild(container.build(nodes[i].childNodes, window));
@@ -378,20 +443,26 @@ Yule.Container.prototype.presizeDomObject = function(){
 	if (this.domObject != null)
 	{
 		this._presizing = true;
-		if (this.size.typeY == null)
-			this.domObject.style.width = this.innerSize("x") + "px";
-		else
-			this.domObject.style.height = this.innerSize("y") + "px";
+		if (this.size.getType("y") == null)
+		{
+			if (!this._sizeActive.getValue("x"))
+				this.domObject.style.width = this.aSize("x") + "px";
+		}
+		else if (!this._sizeActive.getValue("y"))
+			this.domObject.style.height = this.aSize("y") + "px";
 		this._presizing = false;
 	}
 };
 Yule.Container.prototype.postsizeDomObject = function(){
 	if (this.domObject != null)
 	{
-		if (this.size.typeY == null)
-			this.domObject.style.height = this.innerSize("y") + "px";
-		else
-			this.domObject.style.width = this.innerSize("x") + "px";
+		if (this.size.getType("y") == null)
+		{
+			if (!this._sizeActive.getValue("y"))
+				this.domObject.style.height = this.aSize("y") + "px";
+		}
+		else if (!this._sizeActive.getValue("x"))
+			this.domObject.style.width = this.aSize("x") + "px";
 	}
 };
 Yule.Container.prototype.reset = function(){
@@ -403,6 +474,8 @@ Yule.Container.prototype.reset = function(){
 	if (this.domObject != null)
 	{
 		this.domObject.style.visibility = "hidden";
+		this.domObject.style.left = "0px";
+		this.domObject.style.top = "0px";
 		this.domObject.style.height = "";
 		this.domObject.style.width = "";
 	}

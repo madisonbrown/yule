@@ -6,7 +6,7 @@ Yule is a lightweight, layout engine developed in javascript that provides consi
 
 
 <b>Why use it?</b>
-Cascading Style Sheets (CSS), the standard method of structuring in web applications, simply doesn't cut it. Not only does CSS lack several important capabilities, it is also implemented inconsistently accross platforms, and is not reimplemented often enough to keep up with the fast-paced evolution of the web. The result is is that in order to achieve relatively simple layout structures, often one must implement a long series of hacks and workarounds that increases development time and ultimately leads to fragile, dificult-to-maintain applications.
+Cascading Style Sheets (CSS), the standard method of structuring in web applications, simply doesn't cut it. Not only does CSS lack several important capabilities, it is also implemented inconsistently accross platforms, and is not re-implemented often enough to keep up with the fast-paced evolution of the web. The result is is that in order to achieve relatively simple layout structures, often one must implement a long series of hacks and workarounds that increases development time and ultimately leads to fragile, difficult-to-maintain applications.
 
 Consider that one cannot do the following using CSS alone:
 
@@ -53,6 +53,8 @@ A yule XML layout is composed of only one type of element, referred to as a cont
 
         element="{id}"
 
+        contentAlign="(left|center|right|*) &(top|center|bottom|*)" //horizontal vertical
+
         render="(true|false)"
 
         class="{CSS class name}"
@@ -82,7 +84,7 @@ A container may also specify the spacing between its children, easily allowing t
 
 If multiple children within a stacking container are set to fill in the same direction, they will split the available space evenly.
 
-The 'element' attribute is used to arrange the HTML content within the XML structure. If it is set to the id of any object in the body of the HTML file, that HTML object will be linked to the container.
+The 'element' attribute is used to arrange the HTML content within the XML structure. If it is set to the id of any object in the body of the HTML file, that HTML object will be linked to the container. If the linked HTML object contains other HTML objects, then the positioning of that inner content within the container can be specified using the 'contentAlign' attribute, which works in the same way as the 'align' attribute.
 
 By default, containers are not rendered to the screen (meaning they do not produce any HTML DOM Object). Rather, yule arranges within the document the HTML elements they are linked to directly. However, a container that is not linked to any existing element may be rendered anyway by setting its 'render' attribute to 'true'. In this case, yule will add a \<div> element to the HTML document which represents the container, and the id of the container will be transferred to this \<div> so that it can be referenced later.
 

@@ -11,7 +11,7 @@
 		function init(){
 			document.getElementById("remove").style.display = "none";
 			
-			page.inflate('page1.xml', window);
+			page.inflate('page1.xml');
 			page.render();
 	 	}
 		var page = new Yule.Page(window);
@@ -20,12 +20,12 @@
   
   <body onresize="page.render();">
       <div id="header">the two squares on either side consume 50px width. this header fills the remaining width.</div>
-      <div id="leftcolumn">the center column consmes 40% of the availble width in this container. this column consumes half of the remaining width/height.</div>
+      <div id="leftcolumn">the center column consumes 500px of the available width in this container. this column consumes half of the remaining width.</div>
       <div id="box1">align</div>
       <div id="box2">align</div>
       <div id="box3">align</div>
       <div id="box4">align</div>
-      <div id="box5">relatively sized, absolutely centered</div>
+      <div id="box5">relative width, shrink-wrapping height, absolute page-centered</div>
       <div id="box6">align</div>
       <div id="box7">align</div>
       <div id="box8">align</div>
