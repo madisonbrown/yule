@@ -6,9 +6,9 @@ Yule is a lightweight, layout engine developed in javascript that provides consi
 
 Here are a few examples:
 
-<a href="http://www.sandboxsystems.tk/yule/index.html">Example 1: </a> Press the button to inflate the layout.
+<a href="http://www.sandboxsystems.tk/yule/index.html">Example 1:</a> Press the button to inflate the layout.
 
-<a href="http://www.sandboxsystems.tk/yule/index.html">Example 2: </a> Demonstrates stacking capabilities.
+<a href="http://www.sandboxsystems.tk/yule/stacktest.html">Example 2:</a> Demonstrates stacking capabilities.
 
 Resize the window to see the responsiveness of the system.
 
