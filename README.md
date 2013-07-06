@@ -41,7 +41,7 @@ This means that users who wish to view a plain-HTML version of a page structured
 <b>How do I use it?</b>
 A yule XML layout is composed of only one type of element, referred to as a container, which is specified using the \<container> tag and contains any of the following attributes:
 
-    <container>
+    <container
 
         id="{id}"
 
@@ -67,7 +67,7 @@ A yule XML layout is composed of only one type of element, referred to as a cont
 
         class="{CSS class name}"
 
-        style="{CSS style string}"
+        style="{CSS style string}">
 
     </container>
 
