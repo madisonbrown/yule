@@ -16,7 +16,7 @@ Resize the window to see the responsiveness of the system.
 <b>Why use it?</b>
 Cascading Style Sheets (CSS), the standard method of structuring in web applications, simply doesn't cut it. Not only does CSS lack several important capabilities, it is also implemented inconsistently accross platforms, and is not re-implemented often enough to keep up with the fast-paced evolution of the web. The result is is that in order to achieve relatively simple layout structures, often one must implement a long series of hacks and workarounds that increases development time and ultimately leads to fragile, difficult-to-maintain applications.
 
-Consider that one cannot do the following using CSS alone:
+Consider that one cannot do the following (reliably accross platforms) using CSS alone:
 
  1. Set an element to fill available width or height within its parent container. (This is not the same as width/height:100% if there are other elements in the parent container.)
  2. Align any element top/center/bottom, left/center/right within any container, even if its size is unknown.
@@ -47,7 +47,7 @@ A yule XML layout is composed of only one type of element, referred to as a cont
 
         offset="(px|%) &(px|%)" //top left
 
-        size="(px|%|fill|*) &(px|%|fill|*)" //width height
+        size="(px|%|fill|min|*) &(px|%|fill|min|*)" //width height
 
         margin="(px|%)|[(px|%) &(px|%) &(px|%) &(px|%)]" //top right bottom left
 
@@ -73,16 +73,17 @@ A yule XML layout is composed of only one type of element, referred to as a cont
 
 By default, a container is aligned at the top-left corner of its parent, at zero width and height, with no offset, margins or padding, or stacking or spacing.
 
-The size of a container can be set in four ways:
+The size of a container can be set in five ways:
 
 1. Absolutely, in pixels. Includes padding.
 2. Relatively, by percent. Includes padding and margins, relative to inner size of parent.
 3. To expand to fill any available space in its parent container.
+4. To minimize space used if the container is stacking (only works in one direction at a time).
 4. To expand to fit its contents.
 
 The width and height are independent, meaning that they can each be set to any of these types.
 
-Margins and padding work in the same way as in CSS, except that in yule, the padding does not affect the size of the container. Rather, it affects the size of the child containers, if those containers are not sized absolutely. Given any container, its margin will be relative to its parent container size, while its padding will be relative to its own size (if specified by percent). Note, however, that a container set to fit to its content cannot specify padding by percent. 
+Margins and padding work in the same way as in CSS, except that in yule, the padding does not affect the total size of the container. Given any container, its margin will be relative to its parent container size, while its padding will be relative to its own size (if specified by percent). 
 
 Any container may be aligned within any other container left/center/right, top/center/bottom.
 
@@ -90,7 +91,7 @@ If multiple children are added to the same container, they will not affect eacho
 
 A container may also specify the spacing between its children, easily allowing them to be spaced evenly apart.
 
-If multiple children within a stacking container are set to fill in the same direction, they will split the available space evenly.
+If multiple children within a stacking container are set to fill in the stacking direction, they will split the available space evenly.
 
 The 'element' attribute is used to arrange the HTML content within the XML structure. If it is set to the id of any object in the body of the HTML file, that HTML object will be linked to the container. If the linked HTML object contains other HTML objects, then the positioning of that inner content within the container can be specified using the 'contentAlign' attribute, which works in the same way as the 'align' attribute.
 
