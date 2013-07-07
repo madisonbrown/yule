@@ -48,6 +48,10 @@ A yule XML layout is composed of only one type of element, referred to as a cont
         offset="(px|%) &(px|%)" //top left
 
         size="(px|%|fill|min|*) &(px|%|fill|min|*)" //width height
+        
+        minSize="(px|%) &(px|%)" //width height
+        
+        maxSize="(px|%) &(px|%)" //width height
 
         margin="(px|%)|[(px|%) &(px|%) &(px|%) &(px|%)]" //top right bottom left
 
