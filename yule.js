@@ -204,7 +204,7 @@ Yule.Container = function(){
 				
 				if (pType != Yule.DataTypes.Min && maxGroups == null)
 				{
-					var groupHasSpace = (groupSize[curGroup] + spacing + entrySize) < maxSize;				
+					var groupHasSpace = maxSize == null || (groupSize[curGroup] + spacing + entrySize) < maxSize;				
 					if (curGroup == null || (maxEntries == null && !groupHasSpace) || 
 						(maxEntries != null && this.groups[curGroup].stack.length >= maxEntries))
 						appendGroup();
@@ -387,9 +387,9 @@ Yule.Container = function(){
 	Yule.Container.StackManager.prototype.stackDimension = function(){
 		if (this.stackStyle != null)
 		{
-			if (this.stackStyle.style == "left" || this.stackStyle.style == "right")
+			if (this.stackStyle.style == Yule.Positions.Left || this.stackStyle.style == Yule.Positions.Right)
 				return Yule.Dimensions.X;
-			else if (this.stackStyle.style == "top" || this.stackStyle.style == "bottom")
+			else if (this.stackStyle.style == Yule.Positions.Top || this.stackStyle.style == Yule.Positions.Bottom)
 				return Yule.Dimensions.Y;
 		}
 		else
@@ -466,7 +466,7 @@ Yule.Container = function(){
 	this.domObject = null;
 	
 	this._xml = null;
-	this._relative = false;
+	this._content = false;
 };
 Yule.Container.prototype.addChild = function(container){
 	if (container.parent != null)
@@ -645,8 +645,8 @@ Yule.Container.prototype.aSize = function(dimension, cache){
 						var dSize = 0;
 						if (dimension == Yule.Dimensions.X)
 						{
-							//var pType = this.parent.size.getType(dimension);
-							//if (this.parent != null && pType == Yule.DataTypes.Exp || pType == Yule.DataTypes.Min) //FIX: necessary?
+							var pType = this.parent.size.getType(dimension);
+							if (this.parent != null && pType == Yule.DataTypes.Exp || pType == Yule.DataTypes.Min) //FIX: necessary?
 								this.domObject.style.whiteSpace = "nowrap";
 							
 							dSize = this.domObject.offsetWidth;
@@ -660,6 +660,17 @@ Yule.Container.prototype.aSize = function(dimension, cache){
 						
 						if (aSize < dSize)
 							aSize = dSize;
+						
+						if (this._content) //fix
+						{
+							var pType = this.parent.size.getType(dimension);
+							if (pType != Yule.DataTypes.Min && pType != Yule.DataTypes.Exp)
+							{
+								var maxSize = this.parent.innerSize(dimension, true);
+								if (aSize > maxSize)
+									aSize = maxSize;
+							}
+						}
 					}
 				}
 				
@@ -700,7 +711,7 @@ Yule.Container.prototype.aPosition = function(dimension){
 			if (this.parent != null)//If this container has a parent:
 			{
 				//It will be further offset by its parent's aPosition...
-				if (!this._relative)
+				if (!this._content)
 					aPos += this.parent.aPosition(dimension);
 				
 				//as well as its parent's top-left padding.
@@ -714,9 +725,9 @@ Yule.Container.prototype.aPosition = function(dimension){
 				{
 					var alignStyle = this.align.getStyle(dimension);
 					
-					var center = alignStyle == "center";
-					var bottom = dimension == Yule.Dimensions.Y && alignStyle == "bottom";
-					var right = dimension == Yule.Dimensions.X && alignStyle == "right";
+					var center = alignStyle == Yule.Positions.Center;
+					var bottom = dimension == Yule.Dimensions.Y && alignStyle == Yule.Positions.Bottom;
+					var right = dimension == Yule.Dimensions.X && alignStyle == Yule.Positions.Right;
 					
 					if (center || bottom || right)
 					{
@@ -778,15 +789,15 @@ Yule.Container.prototype.initialize = function(document, referenceNode){
 			content.id = this.id + "_content";
 			content.size = new Yule.Vector().set(new Yule.Dim(0, null), new Yule.Dim(0, null));
 			content.align = this.contentAlign;
-			content._relative = true;
+			content._content = true;
 			
 			content.domObject = document.createElement("div");
 			content.domObject.id = content.id;
 			content.domObject.style.position = "absolute";
-			if (content.align.h == "center")
-				content.domObject.style.textAlign = "center";
-			else if (content.align.h == "right")
-				content.domObject.style.textAlign = "right";
+			if (content.align.h == Yule.Positions.Center)
+				content.domObject.style.textAlign = Yule.Positions.Center;
+			else if (content.align.h == Yule.Positions.Right)
+				content.domObject.style.textAlign = Yule.Positions.Right;
 			content.domObject.innerHTML = this.domObject.innerHTML;
 			
 			this.domObject.innerHTML = "";
@@ -927,6 +938,13 @@ Yule.DataTypes.PctW = "%w";
 Yule.DataTypes.Fill = "fill";
 Yule.DataTypes.Min = "min";
 Yule.DataTypes.Null = null;
+
+Yule.Positions = function(){};
+Yule.Positions.Top = "top";
+Yule.Positions.Left = "left";
+Yule.Positions.Bottom = "bottom";
+Yule.Positions.Right = "right";
+Yule.Positions.Center = "center";
 
 Yule.Dimensions = function(){
 	Yule.Dimensions.Flip = function(dimension){
@@ -1160,7 +1178,7 @@ Yule.EdgeSet.prototype.toString = function(reference){
 Yule.StackStyle = function(){
 	Yule.StackStyle.parse = function(data){
 		var stackStyle = new Yule.StackStyle();
-		if (data == "top" || data == "bottom" || data == "left" || data == "right")
+		if (data == Yule.Positions.Top || data == Yule.Positions.Bottom || data == Yule.Positions.Left || data == Yule.Positions.Right)
 			stackStyle.style = data;
 		
 		return stackStyle;
@@ -1177,9 +1195,9 @@ Yule.AlignStyle = function(){
 			var values = data.split(" ");
 			if (values.length == 2)
 			{
-				if (values[0] == "left" || values[0] == "center" || values[0] == "right")
+				if (values[0] == Yule.Positions.Left || values[0] == Yule.Positions.Center || values[0] == Yule.Positions.Right)
 					alignStyle.h = values[0];
-				if (values[1] == "top" || values[1] == "center" || values[1] == "bottom")
+				if (values[1] == Yule.Positions.Top || values[1] == Yule.Positions.Center || values[1] == Yule.Positions.Bottom)
 					alignStyle.v = values[1];
 			}
 		}
