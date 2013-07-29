@@ -6,9 +6,9 @@ Yule is a lightweight, layout engine developed in javascript that provides consi
 
 Here are a few examples:
 
-<a href="http://www.sandboxsystems.tk/yule/index.html">Example 1:</a> Press the button to inflate the layout.
+<a href="http://sandbox.pursuebeauty.net/yule/index.html">Example 1:</a> Press the button to inflate the layout.
 
-<a href="http://www.sandboxsystems.tk/yule/stacktest.html">Example 2:</a> Demonstrates stacking capabilities.
+<a href="http://sandbox.pursuebeauty.net/yule/stacktest.html">Example 2:</a> Demonstrates stacking capabilities.
 
 Resize the window to see the responsiveness of the system.
 
@@ -62,6 +62,8 @@ A yule XML layout is composed of only one type of element, referred to as a cont
         stack="(top|bottom|left|right)"
 
         spacing="(px|%)"
+        
+        stackAlign="(left|center|right|*) &(top|center|bottom|*)" //horizontal vertical
 
         element="{id}"
 
@@ -100,6 +102,8 @@ If multiple children are added to the same container, they will not affect eacho
 A container may also specify the spacing between its children, easily allowing them to be spaced evenly apart.
 
 If multiple children within a stacking container are set to fill, they will split the available space evenly.
+
+Stacked elements may be aligned aligned as a group within their parent using the parent's 'stackAlign' attribute.
 
 The 'element' attribute is used to arrange the HTML content within the XML structure. If it is set to the id of any object in the body of the HTML file, that HTML object will be linked to the container. If the linked HTML object contains other HTML objects, then the positioning of that inner content within the container can be specified using the 'contentAlign' attribute, which works in the same way as the 'align' attribute.
 
