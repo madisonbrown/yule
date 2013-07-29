@@ -1,11 +1,11 @@
 /*
- * yule JavaScript Library Beta v0.3
+ * yule JavaScript Library Beta v0.4
  * https://github.com/madisonbrown/yule
  *
  * Copyright 2013 by Madison Brown
  * Released under the MIT license
  *
- * Date: 07-28-2013
+ * Date: 07-29-2013
  */
  
 function Yule(){};
@@ -75,9 +75,9 @@ Yule.Container = function(){
 				var entryType = entry.size.getType(dimension);
 				var entrySize = 0;
 				if (!excludeFills || entryType != Yule.DataTypes.Fill)
-					entrySize += entry.outerSize(dimension, this.manager.isCaching());
-				else if (!parallel)
-					entrySize = entry.aVector(entry.minSize, dimension, this.manager.isCaching());
+					entrySize += entry.outerSize(dimension, true);
+				else
+					entrySize = entry.aVector(entry.minSize, dimension);
 				
 				if (parallel)
 					size += entrySize;
@@ -90,10 +90,16 @@ Yule.Container = function(){
 			
 			return size;
 		};
+		Yule.Container.StackManager.RenderGroup.prototype.aSize = function(dimension){
+			return this.size(dimension, false);
+		};
+		Yule.Container.StackManager.RenderGroup.prototype.minSize = function(dimension){
+			return this.size(dimension, true);
+		};
 		Yule.Container.StackManager.RenderGroup.prototype.freeSpacePerFill = function(dimension){
 			if (this.manager.isParallel(dimension))
 			{
-				var freeSpace = this.manager.maxSize(dimension) - this.size(dimension, true);
+				var freeSpace = this.manager.maxSize(dimension) - (this.size(dimension, true) - this.minFillSpace(dimension));
 				var evenGroupSize = freeSpace / this.fillCount(dimension);
 				var fillCount = this.fillCount(dimension);
 				
@@ -104,7 +110,7 @@ Yule.Container = function(){
 					var entryType = entry.size.getType(dimension);
 					if (entryType == Yule.DataTypes.Fill)
 					{
-						var minSize = entry.aVector(entry.minSize, dimension, this.manager.isCaching());
+						var minSize = entry.aVector(entry.minSize, dimension);
 						if (minSize > evenGroupSize)
 						{
 							overflow += minSize - evenGroupSize;
@@ -124,7 +130,7 @@ Yule.Container = function(){
 			if (index >= 0)
 			{
 				for (var i = 0; i < index; i++)
-					offset += this.stack[i].outerSize(dimension, this.manager.isCaching());
+					offset += this.stack[i].outerSize(dimension, true);
 					
 				offset += this.manager.spacing(dimension) * index;
 			}
@@ -149,6 +155,14 @@ Yule.Container = function(){
 			
 			return fillCount;
 		};
+		Yule.Container.StackManager.RenderGroup.prototype.minFillSpace = function(dimension){
+			var minFillSpace = 0;
+			for (var i = 0; i < this.stack.length; i++)
+				if (this.stack[i].size.getType(dimension) == Yule.DataTypes.Fill)
+					minFillSpace += this.stack[i].aVector(this.stack[i].minSize, dimension);
+					
+			return minFillSpace;
+		};
 	
 		this.container = container;
 		this.stackStyle = stackStyle;
@@ -164,6 +178,48 @@ Yule.Container = function(){
 	};
 	Yule.Container.StackManager.prototype.organize = function(){
 		var _stackManager = this;
+		function safeSizeOf(entry, container, dimension, outer){
+			var entryType = entry.size.getType(dimension);
+			var xEntryType = entry.size.getType(Yule.Dimensions.flip(dimension));
+			
+			var isFillPercent = false;
+			var isMinFillPercent = false;
+			if (container != null)
+			{
+				var heightIsFill = container.size.getType(Yule.Dimensions.Y) == Yule.DataTypes.Fill;
+				var widthIsFill = container.size.getType(Yule.Dimensions.X) == Yule.DataTypes.Fill;
+				
+				var isFillPercent = (entryType == Yule.DataTypes.PctH && heightIsFill) || (entryType == Yule.DataTypes.PctW && widthIsFill);
+					
+				var entryMinType = entry.minSize.getType(dimension);
+				var isMinFillPercent = (entryMinType == Yule.DataTypes.PctH && heightIsFill) || 
+					(entryMinType == Yule.DataTypes.PctW && widthIsFill);
+				
+				if (outer)	
+				{
+					var entryMarType = [entry.margin.getType(dimension, false), entry.margin.getType(dimension, true)];
+					var isMarFillPercent = [
+						(entryMarType[0] == Yule.DataTypes.PctH && heightIsFill) || (entryMarType[0] == Yule.DataTypes.PctW && widthIsFill),
+						(entryMarType[1] == Yule.DataTypes.PctH && heightIsFill) || (entryMarType[1] == Yule.DataTypes.PctW && widthIsFill)];
+								if (!isMarFillPercent[0])
+						size += entry.aMargin(dimension, true, false);
+						
+					if (!isMarFillPercent[1])
+						size += entry.aMargin(dimension, false, true);
+				}
+			}
+			
+			var isFill = entryType == Yule.DataTypes.Fill || 
+				(dimension == Yule.Dimensions.Y && entryType == Yule.DataTypes.Exp && xEntryType == Yule.DataTypes.Fill);
+				
+			var size = 0;	
+			if (!isFill && !isFillPercent)
+				size += entry.aSize(dimension);
+			else if (!isMinFillPercent)
+				size += entry.aVector(entry.minSize, dimension);
+				
+			return size;
+		}
 		function appendGroup(){
 			curGroup = _stackManager.groups.length;
 			_stackManager.groups[curGroup] = new Yule.Container.StackManager.RenderGroup(_stackManager);
@@ -179,10 +235,13 @@ Yule.Container = function(){
 			var dimension = this.stackDimension();
 			var xDimension = this.perpDimension();
 			var pType = this.container.size.getType(dimension);
+			var xPType = this.container.size.getType(xDimension);
 			var spacing = this.spacing(dimension);
 			var xSpacing = this.spacing(xDimension);
-			var maxSize = this.maxSize(dimension);
-			var maxXSize = this.maxSize(xDimension);
+			if (pType != Yule.DataTypes.Exp && pType != Yule.DataTypes.Min)
+				var maxSize = safeSizeOf(this.container, this.container.parent, dimension, false) - this.container.aPadding(dimension, true, true);
+			if (xPType != Yule.DataTypes.Exp && xPType != Yule.DataTypes.Min)
+				var maxXSize = safeSizeOf(this.container, this.container.parent, xDimension, false) - this.container.aPadding(xDimension, true, true);
 			
 			var curGroup = null;
 			var groupSize = [];
@@ -191,66 +250,57 @@ Yule.Container = function(){
 			for (var i = 0; i < this.stack.length; i++)
 			{
 				var entry = this.stack[i];
-				var entrySize = entry.aMargin(dimension, true, true, false);//c
+				var entrySize = safeSizeOf(entry, this.container, dimension, true);
 				
-				var entryType = entry.size.getType(dimension);
-				var xEntryType = entry.size.getType(xDimension);
-				
-				var willSizeFill = entryType == Yule.DataTypes.Fill || (dimension == Yule.Dimensions.Y && entryType == Yule.DataTypes.Exp && xEntryType == Yule.DataTypes.Fill);
-				if (!willSizeFill)
-					entrySize += entry.aSize(dimension, false);//c
-				else
-					entrySize += entry.aVector(entry.minSize, dimension, false);//c
-				
-				if (pType != Yule.DataTypes.Min && maxGroups == null)
+				if (pType != Yule.DataTypes.Min && maxGroups == null) //add entries filling each group before moving to the next.
 				{
-					var groupHasSpace = maxSize == null || (groupSize[curGroup] + spacing + entrySize) < maxSize;				
-					if (curGroup == null || (maxEntries == null && !groupHasSpace) || 
-						(maxEntries != null && this.groups[curGroup].stack.length >= maxEntries))
+					var groupHasSpace = maxSize == null || (groupSize[curGroup] + spacing + entrySize) < maxSize;
+					var canAppend = (maxEntries == null && !groupHasSpace) || (maxEntries != null && this.groups[curGroup].stack.length >= maxEntries);
+					
+					if (curGroup == null || canAppend)
 						appendGroup();
 				}
-				else
+				else //add entries filling each group evenly along the way.
 				{
-					var nextSize = 0;
-					if (xEntryType != Yule.DataTypes.Fill)
-						nextSize = entry.outerSize(xDimension, false);//c
-					else
-						nextSize = entry.aVector(entry.minSize, xDimension, false);//c
+					var entryXSize = safeSizeOf(entry, this.container, xDimension, true);
+					var pendingXSize = xSize + spacing + entryXSize;
+					var canAppend = (maxGroups != null && this.groups.length < maxGroups) || (maxGroups == null && pendingXSize <= maxXSize);
 					
-					var pendingSize = xSize + spacing + nextSize;
-					if (curGroup == null || (maxGroups != null && this.groups.length < maxGroups) || (maxGroups == null && pendingSize <= maxXSize))
+					if (curGroup == null || canAppend)
 					{
 						appendGroup()
-						groupSpace[curGroup] = nextSize;
-						xSize = pendingSize;
+						groupSpace[curGroup] = entryXSize;
+						xSize = pendingXSize;
 					}
 					else
 					{
 						var next = 0;
-						while (nextSize > groupSpace[next])
-							next++;
 						
-						if (next < this.groups.length - 1)
-						{
-							for (var j = 0; j < groupSize.length; j++)
-								if (groupSize[j] < groupSize[next] && nextSize <= groupSpace[j])
+						//make sure the next entry fits into at least one existing group by finding the first match
+						if (xPType != Yule.DataTypes.Exp)
+							while (next < this.groups.length && 
+								(entryXSize > groupSpace[next] || (maxEntries != null && this.groups[next].stack.length >= maxEntries)))
+								next++;
+						
+						//if it did, check all remaining groups to find the least-filled match
+						if (next < this.groups.length)
+							for (var j = next + 1; j < groupSize.length; j++)
+							{
+								var groupHasRoom = (maxEntries == null || this.groups[j].stack.length < maxEntries) && entryXSize <= groupSpace[j];
+								if (groupSize[j] < groupSize[next] && groupHasRoom)
 									next = j;
-							curGroup = next;
-						}
+							}
+						//otherwise, just add it to the last group
 						else
-						{
-							appendGroup()
-							groupSpace[curGroup] = nextSize;
-							xSize = pendingSize;
-						}
+							next = this.groups.length - 1;
+						
+						curGroup = next;
 					}
 				}
-					
-				if(curGroup >= 0)
-				{
-					this.groups[curGroup].register(this.stack[i]);
-					groupSize[curGroup] += entrySize + spacing;
-				}
+				
+				//add the entry to the selected group	
+				this.groups[curGroup].register(this.stack[i]);
+				groupSize[curGroup] += entrySize + spacing;
 			}
 		}
 		this._organizing = false;
@@ -261,7 +311,12 @@ Yule.Container = function(){
 		var aSize = 0;
 		for (var i = 0; i < this.groups.length; i++)
 		{
-			var groupSize = this.groups[i].size(dimension, false);
+			var groupSize = 0;
+			var pType = this.container.size.getType(dimension);
+			if (pType == Yule.DataTypes.Exp || pType == Yule.DataTypes.Min)
+				groupSize = this.groups[i].minSize(dimension);
+			else
+				groupSize = this.groups[i].aSize(dimension);
 			
 			if (!parallel)
 				aSize += groupSize
@@ -281,56 +336,51 @@ Yule.Container = function(){
 		if (group != null)
 		{
 			var maxSize = this.maxSize(dimension);
-			var minSize = container.aVector(container.minSize, dimension, this.isCaching());
-			
-			if (this.isParallel(dimension))
+			if (this.isParallel(dimension) || maxSize == null)
 			{
 				var freeSpace = group.freeSpacePerFill(dimension);
 			}
 			else
 			{
-				if (maxSize != null)
+				var thisIndex = this.indexOfGroup(group);
+				var thisGroupSize = group.minSize(dimension);
+				var fillGroups = this.fillGroups();
+				var evenGroupSize = maxSize / fillGroups;
+				
+				if (thisGroupSize > evenGroupSize)
 				{
-					var thisIndex = this.indexOfGroup(group);
-					var thisGroupSize = group.size(dimension, true);
-					var fillGroups = this.fillGroups();
-					var evenGroupSize = maxSize / fillGroups;
-					
-					if (thisGroupSize > evenGroupSize)
-					{
-						if (thisGroupSize < maxSize)
-							freeSpace = thisGroupSize;
-						else
-							freeSpace = maxSize;
-					}
+					if (thisGroupSize < maxSize)
+						freeSpace = thisGroupSize;
 					else
-					{
 						freeSpace = maxSize;
-						for (var i = 0; i < this.groups.length; i++)
+				}
+				else
+				{
+					freeSpace = maxSize;
+					for (var i = 0; i < this.groups.length; i++)
+					{
+						if (i != thisIndex)
 						{
-							if (i != thisIndex)
+							var groupSize = this.groups[i].minSize(dimension);
+							var groupFills = this.groups[i].fillCount(dimension);
+							if ((groupFills > 0 && groupSize > evenGroupSize) || (groupFills == 0))
 							{
-								var groupSize = this.groups[i].size(dimension, true);
-								var groupFills = this.groups[i].fillCount(dimension);
-								if ((groupFills > 0 && groupSize > evenGroupSize) || (groupFills == 0))
-								{
-									freeSpace -= groupSize;	
-									
-									if (groupFills > 0)
-										fillGroups--;
-								}
+								freeSpace -= groupSize;	
+								
+								if (groupFills > 0)
+									fillGroups--;
 							}
 						}
-						freeSpace -= (this.groups.length - 1) * this.spacing(dimension);
-						
-						if (fillGroups > 0)
-							freeSpace /= fillGroups;
 					}
+					freeSpace -= (this.groups.length - 1) * this.spacing(dimension);
+					
+					if (fillGroups > 0)
+						freeSpace /= fillGroups;
 				}
 			}
 		}
 		
-		return freeSpace;
+		return Math.floor(freeSpace);
 	};
 	Yule.Container.StackManager.prototype.offsetOf = function(container, dimension){
 		var offset = 0;
@@ -347,7 +397,7 @@ Yule.Container = function(){
 					
 					var index = this.indexOfGroup(group);
 					for (var i = 0; i < index; i++)
-						offset += this.groups[i].size(dimension, false) + spacing;
+						offset += this.groups[i].aSize(dimension) + spacing;
 				}
 			}
 		}
@@ -396,14 +446,10 @@ Yule.Container = function(){
 			return null;
 	};
 	Yule.Container.StackManager.prototype.perpDimension = function(){
-		var stackDimension = this.stackDimension();
-		if (stackDimension == Yule.Dimensions.X)
-			return Yule.Dimensions.Y;
-		else
-			return Yule.Dimensions.X;
+		return Yule.Dimensions.flip(this.stackDimension());
 	};
 	Yule.Container.StackManager.prototype.spacing = function(dimension){
-		return this.container.aVector(this.container.spacing, dimension, this.isCaching());
+		return this.container.aVector(this.container.spacing, dimension, true);
 	};
 	Yule.Container.StackManager.prototype.maxSize = function(dimension){
 		var maxSize = null;
@@ -433,12 +479,6 @@ Yule.Container = function(){
 		else
 			return null;
 	};
-	Yule.Container.StackManager.prototype.isCaching = function(){
-		if (!this._organizing)
-			return true;
-		else
-			return false;
-	};
 
 	this.id = null;
 	this.offset = new Yule.Vector();
@@ -452,6 +492,7 @@ Yule.Container = function(){
 	this.stackGroups = null;
 	this.childrenPerGroup = null;
 	this.align = new Yule.AlignStyle();
+	this.stackAlign = new Yule.AlignStyle();
 	this.contentAlign = new Yule.AlignStyle();
 	this.element = null;
 	this.className = null;
@@ -529,7 +570,7 @@ Yule.Container.prototype.getChildByXml = function(node){
 	
 	return result;
 };
-Yule.Container.prototype.aRef = function(dimension, cache){
+Yule.Container.prototype.aRef = function(dimension){
 	if (this.parent != null)
 	{
 		var ref = this;
@@ -539,12 +580,12 @@ Yule.Container.prototype.aRef = function(dimension, cache){
 			var refType = ref.size.getType(dimension);
 		} while((refType == Yule.DataTypes.Exp || refType == Yule.DataTypes.Min) && ref.parent != null);
 		
-		return ref.innerSize(dimension, cache);
+		return ref.innerSize(dimension);
 	}
 	else
 		return 0;
 };
-Yule.Container.prototype.aVector = function(vector, dimension, cache){
+Yule.Container.prototype.aVector = function(vector, dimension){
 	var refDim = dimension;
 	var type = vector.getType(dimension);
 	if (type == Yule.DataTypes.PctH || type == Yule.DataTypes.PctW)
@@ -552,11 +593,13 @@ Yule.Container.prototype.aVector = function(vector, dimension, cache){
 		var refDim = Yule.Dimensions.X;
 		if (type == Yule.DataTypes.PctH)
 			refDim = Yule.Dimensions.Y;
+		
+		return vector.toAbs(dimension, this.aRef(refDim));
 	}
-
-	return vector.toAbs(dimension, this.aRef(refDim, cache));
+	else
+		return vector.toAbs(dimension, 0);
 };
-Yule.Container.prototype.aEdge = function(edgeSet, dimension, post, cache){
+Yule.Container.prototype.aEdge = function(edgeSet, dimension, post){
 	var refDim = dimension;
 	var type = edgeSet.getType(dimension, post);
 	if (type == Yule.DataTypes.PctH || type == Yule.DataTypes.PctW)
@@ -564,26 +607,35 @@ Yule.Container.prototype.aEdge = function(edgeSet, dimension, post, cache){
 		var refDim = Yule.Dimensions.X;
 		if (type == Yule.DataTypes.PctH)
 			refDim = Yule.Dimensions.Y;
+		
+		return edgeSet.toAbs(dimension, post, this.aRef(refDim));
 	}
-	
-	return edgeSet.toAbs(dimension, post, this.aRef(refDim, cache));
+	else
+		return edgeSet.toAbs(dimension, post, 0);
 };
-Yule.Container.prototype.aEdgeSum = function(edgeSet, dimension, tl, br, cache){
+Yule.Container.prototype.aEdgeSum = function(edgeSet, dimension, tl, br){
 	var edge = 0;
 	if (tl)
-		edge += this.aEdge(edgeSet, dimension, false, cache);
+		edge += this.aEdge(edgeSet, dimension, false);
 	if (br)
-		edge += this.aEdge(edgeSet, dimension, true, cache);
+		edge += this.aEdge(edgeSet, dimension, true);
 	
 	return edge;
 };
-Yule.Container.prototype.aMargin = function(dimension, tl, br, cache){
-	return this.aEdgeSum(this.margin, dimension, tl, br, cache);
+Yule.Container.prototype.aMargin = function(dimension, tl, br){
+	return this.aEdgeSum(this.margin, dimension, tl, br);
 };
-Yule.Container.prototype.aPadding = function(dimension, tl, br, cache){
-	return this.aEdgeSum(this.padding, dimension, tl, br, cache);
+Yule.Container.prototype.aPadding = function(dimension, tl, br){
+	var padding = 0;
+	//fix:should reference own size;
+	if (tl)
+		padding += this.padding.toAbs(dimension, false, 0);
+	if (br)
+		padding += this.padding.toAbs(dimension, true, 0);
+	
+	return padding;
 };
-Yule.Container.prototype.aSize = function(dimension, cache){
+Yule.Container.prototype.aSize = function(dimension){
 	if (this._sizeActive.getValue(dimension) == false) //prevent infinite loop
 	{
 		var aSize = 0;
@@ -599,23 +651,23 @@ Yule.Container.prototype.aSize = function(dimension, cache){
 			else if (type == Yule.DataTypes.PctH || type == Yule.DataTypes.PctW)
 			{
 				if (this.parent != null)
-					aSize = this.aVector(this.size, dimension, cache) - this.aMargin(dimension, true, true, cache);
+					aSize = this.aVector(this.size, dimension) - this.aMargin(dimension, true, true);
 			}
 			else if (type == Yule.DataTypes.Fill)
 			{
 				if (this.parent != null)
 				{
-					if (this.parent.isStacking())
+					if (this.parent.isStacking() && this.parent.stackManager._organized)
 						aSize = this.parent.stackManager.freeSpaceFor(this, dimension);
 					else
-						aSize = this.parent.innerSize(dimension, cache);
+						aSize = this.parent.innerSize(dimension);
 					
-					aSize -= this.aMargin(dimension, true, true, cache);
+					aSize -= this.aMargin(dimension, true, true);
 				}
 			}
 			else
 			{
-				var padding = this.aPadding(dimension, true, true, cache);
+				var padding = this.aPadding(dimension, true, true);
 				
 				if (this.isStacking())
 					aSize += this.stackManager.aSize(dimension);
@@ -631,7 +683,7 @@ Yule.Container.prototype.aSize = function(dimension, cache){
 						var cType = this.children[i].size.getType(dimension);
 						if (cType != Yule.DataTypes.Fill)
 						{
-							var cSize = this.children[i].outerSize(dimension, cache) + this.children[i].aVector(this.children[i].offset, dimension);
+							var cSize = this.children[i].outerSize(dimension) + this.children[i].aVector(this.children[i].offset, dimension);
 							if (cSize > aSize)
 								aSize = cSize;
 						}
@@ -649,28 +701,17 @@ Yule.Container.prototype.aSize = function(dimension, cache){
 							if (this.parent != null && pType == Yule.DataTypes.Exp || pType == Yule.DataTypes.Min) //FIX: necessary?
 								this.domObject.style.whiteSpace = "nowrap";
 							
-							dSize = this.domObject.offsetWidth;
+							dSize = this.domObject.offsetWidth + 1;
 							
 							this.domObject.style.whiteSpace = "normal";
 						}
 						else if (dimension == Yule.Dimensions.Y)
-							dSize = this.domObject.offsetHeight;
+							dSize = this.domObject.offsetHeight + 1;
 						
 						dSize -= padding;
 						
 						if (aSize < dSize)
 							aSize = dSize;
-						
-						if (this._content) //fix
-						{
-							var pType = this.parent.size.getType(dimension);
-							if (pType != Yule.DataTypes.Min && pType != Yule.DataTypes.Exp)
-							{
-								var maxSize = this.parent.innerSize(dimension, true);
-								if (aSize > maxSize)
-									aSize = maxSize;
-							}
-						}
 					}
 				}
 				
@@ -678,14 +719,14 @@ Yule.Container.prototype.aSize = function(dimension, cache){
 			}
 			
 			
-			var minSize = this.aVector(this.minSize, dimension, cache);
+			var minSize = this.aVector(this.minSize, dimension);
 			if (aSize < minSize)
 				aSize = minSize;
 			
 			if (aSize < 0)
 				aSize == 0;
 			
-			if (cache && this.cache)
+			if (this.cache)
 				this._aSize.setValue(dimension, aSize);
 			this._sizeActive.setValue(dimension, false);
 		}
@@ -706,7 +747,7 @@ Yule.Container.prototype.aPosition = function(dimension){
 			this._positionActive.setValue(dimension, true);
 			
 			//At minimum, aPosition will include this containers specified offset and its top-left margin.
-			aPos = this.aVector(this.offset, dimension, false) + this.aMargin(dimension, true, false, false);
+			aPos = this.aVector(this.offset, dimension) + this.aMargin(dimension, true, false);
 			
 			if (this.parent != null)//If this container has a parent:
 			{
@@ -719,9 +760,27 @@ Yule.Container.prototype.aPosition = function(dimension){
 				
 				//Additionally, if this container is part of a stack, it will be offset by that stack.
 				if (this.parent.isStacking())
+				{
 					aPos += this.parent.stackManager.offsetOf(this, dimension);
+					
+					//And the stack can be aligned within this container.
+					var alignStyle = this.parent.stackAlign.getStyle(dimension);
+					
+					var center = alignStyle == Yule.Positions.Center;
+					var bottom = dimension == Yule.Dimensions.Y && alignStyle == Yule.Positions.Bottom;
+					var right = dimension == Yule.Dimensions.X && alignStyle == Yule.Positions.Right;
+					
+					if (center || bottom || right)
+					{
+						var alignOffset = this.parent.innerSize(dimension, false) - this.parent.stackManager.aSize(dimension);
+						if (center)
+							alignOffset /= 2;
+						
+						aPos += Math.floor(alignOffset);
+					}
+				}
 				
-				if (!this.parent.isStackingBy(dimension)) //If it's not stacking in the current dimension, it can also be aligned
+				if (!this.parent.isStackingBy(dimension)) //If it's not stacking in the current dimension, it can also be aligned independently
 				{
 					var alignStyle = this.align.getStyle(dimension);
 					
@@ -741,7 +800,7 @@ Yule.Container.prototype.aPosition = function(dimension){
 						if (center)
 							alignOffset /= 2;
 						
-						aPos += alignOffset;
+						aPos += Math.floor(alignOffset);
 					}
 				}
 			}
@@ -757,11 +816,11 @@ Yule.Container.prototype.aPosition = function(dimension){
 	else
 		return 0;
 };
-Yule.Container.prototype.outerSize = function(dimension, cache){
-	return this.aSize(dimension, cache) + this.aMargin(dimension, true, true, cache);
+Yule.Container.prototype.outerSize = function(dimension){
+	return this.aSize(dimension) + this.aMargin(dimension, true, true);
 };
-Yule.Container.prototype.innerSize = function(dimension, cache){
-	return this.aSize(dimension, cache) - this.aPadding(dimension, true, true, cache);
+Yule.Container.prototype.innerSize = function(dimension){
+	return this.aSize(dimension) - this.aPadding(dimension, true, true);
 };
 Yule.Container.prototype.initialize = function(document, referenceNode){
 	this.stackManager = new Yule.Container.StackManager(this.stack, this);
@@ -787,7 +846,10 @@ Yule.Container.prototype.initialize = function(document, referenceNode){
 			var content = new Yule.Container();
 			
 			content.id = this.id + "_content";
-			content.size = new Yule.Vector().set(new Yule.Dim(0, null), new Yule.Dim(0, null));
+			if (this.size.getType(Yule.Dimensions.X) == Yule.DataTypes.Exp)
+				content.size = Yule.Vector.parse("* *");
+			else
+				content.size = Yule.Vector.parse("fill *");
 			content.align = this.contentAlign;
 			content._content = true;
 			
@@ -825,6 +887,7 @@ Yule.Container.prototype.build = function(nodes, document, referenceNode){
 			container.stackGroups = nodes[i].getAttribute("stackGroups");
 			container.childrenPerGroup = nodes[i].getAttribute("childrenPerGroup");
 			container.align = Yule.AlignStyle.parse(nodes[i].getAttribute("align"));
+			container.stackAlign = Yule.AlignStyle.parse(nodes[i].getAttribute("stackAlign"));
 			container.contentAlign = Yule.AlignStyle.parse(nodes[i].getAttribute("contentAlign"));
 			container.element = nodes[i].getAttribute("element");
 			container.className = nodes[i].getAttribute("class");
@@ -870,10 +933,10 @@ Yule.Container.prototype.presizeDomObject = function(){
 		if (this.size.getType(Yule.Dimensions.Y) == Yule.DataTypes.Exp)
 		{
 			if (!this._sizeActive.getValue(Yule.Dimensions.X))
-				this.domObject.style.width = this.aSize(Yule.Dimensions.X, true) + Yule.DataTypes.Px;
+				this.domObject.style.width = this.aSize(Yule.Dimensions.X) + "px";
 		}
 		else if (!this._sizeActive.getValue(Yule.Dimensions.Y))
-			this.domObject.style.height = this.aSize(Yule.Dimensions.Y, true) + Yule.DataTypes.Px;
+			this.domObject.style.height = this.aSize(Yule.Dimensions.Y) + "px";
 		
 		this._presizing = false;
 	}
@@ -884,10 +947,10 @@ Yule.Container.prototype.postsizeDomObject = function(){
 		if (this.size.getType(Yule.Dimensions.Y) == Yule.DataTypes.Exp)
 		{
 			if (!this._sizeActive.getValue(Yule.Dimensions.Y))
-				this.domObject.style.height = this.aSize(Yule.Dimensions.Y, true) + Yule.DataTypes.Px;
+				this.domObject.style.height = this.aSize(Yule.Dimensions.Y) + "px";
 		}
 		else if (!this._sizeActive.getValue(Yule.Dimensions.X))
-			this.domObject.style.width = this.aSize(Yule.Dimensions.X, true) + Yule.DataTypes.Px;
+			this.domObject.style.width = this.aSize(Yule.Dimensions.X) + "px";
 			
 		this._sizing = false;
 	}
@@ -897,8 +960,8 @@ Yule.Container.prototype.positionElements = function(){
 	
 	if (this.domObject != null)
 	{
-		this.domObject.style.left = this.aPosition(Yule.Dimensions.X) + Yule.DataTypes.Px;
-		this.domObject.style.top = this.aPosition(Yule.Dimensions.Y) + Yule.DataTypes.Px;
+		this.domObject.style.left = this.aPosition(Yule.Dimensions.X) + "px";
+		this.domObject.style.top = this.aPosition(Yule.Dimensions.Y) + "px";
 	}
 	
 	for (var i = 0; i < this.children.length; i++)
@@ -937,7 +1000,7 @@ Yule.DataTypes.PctH = "%h";
 Yule.DataTypes.PctW = "%w";
 Yule.DataTypes.Fill = "fill";
 Yule.DataTypes.Min = "min";
-Yule.DataTypes.Null = null;
+Yule.DataTypes.Exp = null;
 
 Yule.Positions = function(){};
 Yule.Positions.Top = "top";
@@ -946,38 +1009,36 @@ Yule.Positions.Bottom = "bottom";
 Yule.Positions.Right = "right";
 Yule.Positions.Center = "center";
 
-Yule.Dimensions = function(){
-	Yule.Dimensions.Flip = function(dimension){
-	if (dimension == Yule.Vector.Dimensions.X)
-		return Yule.Vector.Dimensions.Y;
-	else if (dimension == Yule.Vector.Dimensions.Y)
-		return Yule.Vector.Dimensions.X;
-};
+Yule.Dimensions = function(){};
+Yule.Dimensions.flip = function(dimension){
+	if (dimension == Yule.Dimensions.X)
+		return Yule.Dimensions.Y;
+	else if (dimension == Yule.Dimensions.Y)
+		return Yule.Dimensions.X;
 };
 Yule.Dimensions.X = "x";
 Yule.Dimensions.Y = "y";
 
-Yule.Dim = function(value, type){
-	Yule.Dim.parse = function(data, types){
-		var dim = new Yule.Dim(0, null);
-		if (data != null)
-		{
-			var pattern = /[^0-9|-]/;
-			var match = pattern.exec(data);
-			if (match != null)
-			{
-				dim.value = parseFloat(data.slice(0, match.index));
-				var type = data.slice(match.index);
-				if (types.indexOf(type) > -1)
-					dim.type = type;
-			}
-		}
-		
-		return dim;
-	};
-	
+Yule.Dim = function(value, type){	
 	this.value = value;
 	this.type = type;
+};
+Yule.Dim.parse = function(data, types){
+	var dim = new Yule.Dim(0, null);
+	if (data != null)
+	{
+		var pattern = /[^0-9|-]/;
+		var match = pattern.exec(data);
+		if (match != null)
+		{
+			dim.value = parseFloat(data.slice(0, match.index));
+			var type = data.slice(match.index);
+			if (types.indexOf(type) > -1)
+				dim.type = type;
+		}
+	}
+	
+	return dim;
 };
 Yule.Dim.prototype.clone = function(){
 	return new Yule.Dim(this.value, this.type);
@@ -991,34 +1052,33 @@ Yule.Dim.prototype.toAbs = function(reference){
 		return 0;
 };
 
-Yule.Vector = function(){
-	Yule.Vector.parse = function(data){
-		var vector = new Yule.Vector();
-		if (data != null)
-		{
-			var values = data.split(" ");
-			var types = [Yule.DataTypes.Px, "%", Yule.DataTypes.PctW, Yule.DataTypes.PctH, Yule.DataTypes.Fill, Yule.DataTypes.Min];
-			if (values.length == 1)
-			{
-				vector.x = Yule.Dim.parse(values[0], types);
-				vector.y = vector.x.clone();
-			}
-			else if (values.length == 2)
-			{
-				vector.x = Yule.Dim.parse(values[0], types);
-				vector.y = Yule.Dim.parse(values[1], types);
-			}
-			if (vector.x.type == "%")
-				vector.x.type = Yule.DataTypes.PctW;
-			if (vector.y.type == "%")
-				vector.y.type = Yule.DataTypes.PctH;
-		}
-		
-		return vector;
-	};
-	
+Yule.Vector = function(){	
 	this.x = new Yule.Dim(0, Yule.DataTypes.Px);
 	this.y = new Yule.Dim(0, Yule.DataTypes.Px);
+};
+Yule.Vector.parse = function(data){
+	var vector = new Yule.Vector();
+	if (data != null)
+	{
+		var values = data.split(" ");
+		var types = [Yule.DataTypes.Px, "%", Yule.DataTypes.PctW, Yule.DataTypes.PctH, Yule.DataTypes.Fill, Yule.DataTypes.Min];
+		if (values.length == 1)
+		{
+			vector.x = Yule.Dim.parse(values[0], types);
+			vector.y = vector.x.clone();
+		}
+		else if (values.length == 2)
+		{
+			vector.x = Yule.Dim.parse(values[0], types);
+			vector.y = Yule.Dim.parse(values[1], types);
+		}
+		if (vector.x.type == "%")
+			vector.x.type = Yule.DataTypes.PctW;
+		if (vector.y.type == "%")
+			vector.y.type = Yule.DataTypes.PctH;
+	}
+	
+	return vector;
 };
 Yule.Vector.prototype.get = function(dimension){
 	if (dimension == Yule.Dimensions.X)
@@ -1070,45 +1130,44 @@ Yule.Vector.prototype.toAbs = function(dimension, reference){
 	return this.get(dimension).toAbs(reference);
 };
 
-Yule.EdgeSet = function(){
-	Yule.EdgeSet.parse = function(data){
-		var edgeSet = new Yule.EdgeSet();
-		if (data != null)
-		{
-			var values = data.split(" ");
-			var types = [Yule.DataTypes.Px, "%", Yule.DataTypes.PctW, Yule.DataTypes.PctH];
-			if (values.length == 1)
-			{
-				edgeSet.t = Yule.Dim.parse(values[0], types);
-				edgeSet.r = edgeSet.t.clone();
-				edgeSet.b = edgeSet.t.clone();
-				edgeSet.l = edgeSet.t.clone();
-			}
-			else if (values.length == 4)
-			{
-				edgeSet.t = Yule.Dim.parse(values[0], types);	
-				edgeSet.r = Yule.Dim.parse(values[1], types);
-				edgeSet.b = Yule.Dim.parse(values[2], types);
-				edgeSet.l = Yule.Dim.parse(values[3], types);
-			}
-			
-			if (edgeSet.t.type == "%")
-				edgeSet.t.type = Yule.DataTypes.PctH;
-			if (edgeSet.r.type == "%")
-				edgeSet.r.type = Yule.DataTypes.PctW;
-			if (edgeSet.b.type == "%")
-				edgeSet.b.type = Yule.DataTypes.PctH;
-			if (edgeSet.l.type == "%")
-				edgeSet.l.type = Yule.DataTypes.PctW;
-		}
-		
-		return edgeSet;
-	};
-	
+Yule.EdgeSet = function(){	
 	this.t = new Yule.Dim(0, Yule.DataTypes.Px);
 	this.r = new Yule.Dim(0, Yule.DataTypes.Px);
 	this.b = new Yule.Dim(0, Yule.DataTypes.Px);
 	this.l = new Yule.Dim(0, Yule.DataTypes.Px);
+};
+Yule.EdgeSet.parse = function(data){
+	var edgeSet = new Yule.EdgeSet();
+	if (data != null)
+	{
+		var values = data.split(" ");
+		var types = [Yule.DataTypes.Px, "%", Yule.DataTypes.PctW, Yule.DataTypes.PctH];
+		if (values.length == 1)
+		{
+			edgeSet.t = Yule.Dim.parse(values[0], types);
+			edgeSet.r = edgeSet.t.clone();
+			edgeSet.b = edgeSet.t.clone();
+			edgeSet.l = edgeSet.t.clone();
+		}
+		else if (values.length == 4)
+		{
+			edgeSet.t = Yule.Dim.parse(values[0], types);	
+			edgeSet.r = Yule.Dim.parse(values[1], types);
+			edgeSet.b = Yule.Dim.parse(values[2], types);
+			edgeSet.l = Yule.Dim.parse(values[3], types);
+		}
+		
+		if (edgeSet.t.type == "%")
+			edgeSet.t.type = Yule.DataTypes.PctH;
+		if (edgeSet.r.type == "%")
+			edgeSet.r.type = Yule.DataTypes.PctW;
+		if (edgeSet.b.type == "%")
+			edgeSet.b.type = Yule.DataTypes.PctH;
+		if (edgeSet.l.type == "%")
+			edgeSet.l.type = Yule.DataTypes.PctW;
+	}
+	
+	return edgeSet;
 };
 Yule.EdgeSet.prototype.get = function(dimension, post){
 	if (dimension == Yule.Dimensions.X)
@@ -1172,42 +1231,41 @@ Yule.EdgeSet.prototype.toString = function(reference){
 	var b = this.toAbs(Yule.Dimensions.Y, true, reference);
 	var l = this.toAbs(Yule.Dimensions.X, false, reference);
 	
-	return t + Yule.DataTypes.Px + " " + r + Yule.DataTypes.Px + " " + b + Yule.DataTypes.Px + " " + l + Yule.DataTypes.Px;
+	return t + "px" + " " + r + "px" + " " + b + "px" + " " + l + "px";
 };
 
-Yule.StackStyle = function(){
-	Yule.StackStyle.parse = function(data){
-		var stackStyle = new Yule.StackStyle();
-		if (data == Yule.Positions.Top || data == Yule.Positions.Bottom || data == Yule.Positions.Left || data == Yule.Positions.Right)
-			stackStyle.style = data;
-		
-		return stackStyle;
-	};
-	
+Yule.StackStyle = function(){	
 	this.style = null;
 };
-
-Yule.AlignStyle = function(){
-	Yule.AlignStyle.parse = function(data){
-		var alignStyle = new Yule.AlignStyle();
-		if (data != null)
-		{
-			var values = data.split(" ");
-			if (values.length == 2)
-			{
-				if (values[0] == Yule.Positions.Left || values[0] == Yule.Positions.Center || values[0] == Yule.Positions.Right)
-					alignStyle.h = values[0];
-				if (values[1] == Yule.Positions.Top || values[1] == Yule.Positions.Center || values[1] == Yule.Positions.Bottom)
-					alignStyle.v = values[1];
-			}
-		}
-		
-		return alignStyle;
-	};
+Yule.StackStyle.parse = function(data){
+	var stackStyle = new Yule.StackStyle();
+	if (data == Yule.Positions.Top || data == Yule.Positions.Bottom || data == Yule.Positions.Left || data == Yule.Positions.Right)
+		stackStyle.style = data;
 	
+	return stackStyle;
+};
+
+Yule.AlignStyle = function(){	
 	this.h = null;
 	this.v = null;
 };
+Yule.AlignStyle.parse = function(data){
+	var alignStyle = new Yule.AlignStyle();
+	if (data != null)
+	{
+		var values = data.split(" ");
+		if (values.length == 2)
+		{
+			if (values[0] == Yule.Positions.Left || values[0] == Yule.Positions.Center || values[0] == Yule.Positions.Right)
+				alignStyle.h = values[0];
+			if (values[1] == Yule.Positions.Top || values[1] == Yule.Positions.Center || values[1] == Yule.Positions.Bottom)
+				alignStyle.v = values[1];
+		}
+	}
+	
+	return alignStyle;
+};
+
 Yule.AlignStyle.prototype.getStyle = function(dimension){
 	if (dimension == Yule.Dimensions.X)
 		return this.h;
