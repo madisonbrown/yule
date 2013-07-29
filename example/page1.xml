@@ -3,25 +3,24 @@
 <container size="100% 100%" spacing="10px" padding="10px" stack="top">
 	<container size="100% *" spacing="10px" stack="left">
 		<container size="50px 50px" style="background-color:green;" render="true"/>
-		<container size="fill 50px" padding="10px" element="header" contentAlign="center center" class="header" />
+		<container size="fill 50px" padding="10px" element="header" contentAlign="center center" class="header" style="overflow:hidden;" />
 		<container size="50px 50px" style="background-color:blue;" render="true" />
 	</container>
-	<container size="100% fill" spacing="10px" stack="left">
-		<container size="fill 100%" padding="10px" spacing="10px" element="leftcolumn" class="leftcolumn" />
+	<container size="100% fill" spacing="10px" stack="left" stackGroups="1">
+		<container size="fill 100%" padding="10px" spacing="10px" element="leftcolumn" contentAlign="* center" class="leftcolumn" style="overflow:hidden;" />
 		<container size="500px 100%">
-			<container size="* *" padding="10px" align="left top" element="box1" class="box" />
-			<container size="* *" padding="10px" align="left center" element="box2" class="box" />
-			<container size="* *" padding="10px" align="left bottom" element="box3" class="box" />
-			<container size="* *" padding="10px" align="center top" element="box4" class="box" />
-			
-			<container size="* *" padding="10px" align="center bottom" element="box6" class="box" />
-			<container size="* *" padding="10px" align="right top" element="box7" class="box" />
-			<container size="* *" padding="10px" align="right center" element="box8" class="box" />
-			<container size="* *" padding="10px" align="right bottom" element="box9" class="box" />
+			<container size="* *" padding="10px" align="left top" element="box1" contentAlign="center center" class="box" />
+			<container size="* *" padding="10px" align="left center" element="box2" contentAlign="center center" class="box" />
+			<container size="* *" padding="10px" align="left bottom" element="box3" contentAlign="center center" class="box" />
+			<container size="* *" padding="10px" align="center top" element="box4" contentAlign="center center" class="box" />
+			<container size="* *" padding="10px" align="center bottom" element="box6" contentAlign="center center" class="box" />
+			<container size="* *" padding="10px" align="right top" element="box7" contentAlign="center center" class="box" />
+			<container size="* *" padding="10px" align="right center" element="box8" contentAlign="center center" class="box" />
+			<container size="* *" padding="10px" align="right bottom" element="box9" contentAlign="center center" class="box" />
 		</container>
-		<container size="fill *" padding="10px" element="rightcolumn" class="rightcolumn" />
+		<container size="fill *" padding="10px" element="rightcolumn" contentAlign="* top" class="rightcolumn" style="overflow:hidden;" />
 	</container>
 	<container size="* *" padding="10px" align="center *" element="footer" contentAlign="center center" class="footer" />
 </container>
-<container size="10% *" padding="10px" align="center center" element="box5" contentAlign="center center" class="box" />
+<container size="10% *" padding="10px" align="center center" element="box5" contentAlign="center center" class="box" style="overflow:hidden;" />
 </container>
