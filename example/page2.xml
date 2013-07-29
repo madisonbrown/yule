@@ -30,36 +30,4 @@
 	<container size="50px 50px" style="background-color:blue;" render="true" />
 	<container size="50px 50px" style="background-color:blue;" render="true" />
 	<container size="50px fill" minSize="30px 30px" style="background-color:yellow;" render="true" />
-	<container size="50px 50px" style="background-color:blue;" render="true" />
-	<container size="50px 50px" style="background-color:blue;" render="true" />
-	<container size="50px 50px" style="background-color:blue;" render="true" />
-	<container size="50px fill" minSize="30px 30px" style="background-color:yellow;" render="true" />
-	<container size="50px 50px" style="background-color:blue;" render="true" />
-	<container size="50px 50px" style="background-color:blue;" render="true" />
-	<container size="50px 50px" style="background-color:blue;" render="true" />
-	<container size="50px fill" minSize="30px 30px" style="background-color:yellow;" render="true" />
-	<container size="50px 50px" style="background-color:blue;" render="true" />
-	<container size="50px 50px" style="background-color:blue;" render="true" />
-	<container size="50px 50px" style="background-color:blue;" render="true" />
-	<container size="50px fill" minSize="30px 30px" style="background-color:yellow;" render="true" />
-	<container size="50px 50px" style="background-color:blue;" render="true" />
-	<container size="50px 50px" style="background-color:blue;" render="true" />
-	<container size="50px 50px" style="background-color:blue;" render="true" />
-	<container size="50px fill" minSize="30px 30px" style="background-color:yellow;" render="true" />
-	<container size="50px 50px" style="background-color:blue;" render="true" />
-	<container size="50px 50px" style="background-color:blue;" render="true" />
-	<container size="50px 50px" style="background-color:blue;" render="true" />
-	<container size="50px fill" minSize="30px 30px" style="background-color:yellow;" render="true" />
-	<container size="50px 50px" style="background-color:blue;" render="true" />
-	<container size="50px 50px" style="background-color:blue;" render="true" />
-	<container size="50px 50px" style="background-color:blue;" render="true" />
-	<container size="50px fill" minSize="30px 30px" style="background-color:yellow;" render="true" />
-	<container size="50px 50px" style="background-color:blue;" render="true" />
-	<container size="50px 50px" style="background-color:blue;" render="true" />
-	<container size="50px 50px" style="background-color:blue;" render="true" />
-	<container size="50px fill" minSize="30px 30px" style="background-color:yellow;" render="true" />
-	<container size="50px 50px" style="background-color:blue;" render="true" />
-	<container size="50px 50px" style="background-color:blue;" render="true" />
-	<container size="50px 50px" style="background-color:blue;" render="true" />
-	<container size="50px fill" minSize="30px 30px" style="background-color:yellow;" render="true" />
 </container>
