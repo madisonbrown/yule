@@ -3,6 +3,44 @@ body
 {
 	font-family:Arial, Helvetica, sans-serif;
 	font-weight:bold;
+	/* CSS Document */
+html, body
+{
+	font-family:Arial, Helvetica, sans-serif;
+	font-weight:bold;
+	margin:0px;
+	height:100%;
+}
+.header
+{
+	background-color:yellow;
+	font-size:24px;
+}
+.leftcolumn
+{
+	background-color:blue;
+	color:white;
+	text-align:justify;
+	font-size:36px;
+}
+.box
+{
+	background-color:purple;
+	color:white;
+}
+.rightcolumn
+{
+	background-color:red;
+	color:white;
+	text-align:justify;
+	font-size:72px;
+}
+.footer
+{
+	background-color:green;
+	color:white;
+	font-size:18px;
+}
 }
 .header
 {
