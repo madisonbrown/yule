@@ -11,11 +11,11 @@
 		function init(){
 			document.getElementById("remove").style.display = "none";
 			
-			page.inflate('page1.xml', document);
+			page.inflate('page1.xml', document, document.body);
 			render();
 	 	}
 		function render(){
-			page.renderTo(window);
+			page.renderToScope();
 		}
 		var page = new Yule.Frame();
     </script>
