@@ -9,11 +9,11 @@
     <script src="../yule.js" type="text/javascript"></script>
     <script>
 		function init(){
-			page.inflate('page2.xml', document);
+			page.inflate('page2.xml', document, document.body);
 			render();
 	 	}
 		function render(){
-			page.renderTo(window);
+			page.renderToScope();
 		}
 		var page = new Yule.Frame();
     </script>
