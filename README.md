@@ -79,7 +79,8 @@ A yule XML layout is composed of only one type of element, referred to as a cont
 
     </container>
 
-Any % value can be further specified as "%h" or "%w", meaning percent of the width or height.
+Any "%" value can be further specified as "%h" or "%w", meaning percent of the width or height.
+Any "%" value can also be specified as "%s", meaning percent of the smallest parent dimension. This allows one to easily create a square element that is guaranteed to fit in its container.
 
 By default, a container is aligned at the top-left corner of its parent, at zero width and height, with no offset, margins or padding, or stacking or spacing.
 
