@@ -5,7 +5,7 @@
  * Copyright 2013 by Madison Brown
  * Released under the MIT license
  *
- * Date: 08-12-2013
+ * Date: 07-28-2013
  */
  
 var calls = 0;
@@ -267,14 +267,12 @@ Yule.Container = function(){
 				var entry = this.stack[i];
 				var entrySize = safeSizeOf(entry, this.container, dimension, true);
 				
-				if (curGroup == null)
-					appendGroup();
-				else if (pType != Yule.DataTypes.Min && maxGroups == null) //add entries filling each group before moving to the next.
+				if (pType != Yule.DataTypes.Min && maxGroups == null) //add entries filling each group before moving to the next.
 				{
 					var groupHasSpace = maxSize == null || (groupSize[curGroup] + spacing + entrySize) < maxSize;
 					var canAppend = (maxEntries == null && !groupHasSpace) || (maxEntries != null && this.groups[curGroup].stack.length >= maxEntries);
 					
-					if (canAppend)
+					if (canAppend || curGroup == null)
 						appendGroup();
 					else
 						groupSize[curGroup] += spacing;
@@ -282,10 +280,12 @@ Yule.Container = function(){
 				else //add entries filling each group evenly along the way.
 				{
 					var entryXSize = safeSizeOf(entry, this.container, xDimension, true);
-					var pendingXSize = xSize + spacing + entryXSize;
+					var pendingXSize = xSize + entryXSize;
+					if (curGroup != null && this.groups[curGroup].stack.length > 0)
+						pendingXSize += spacing;
 					var canAppend = (maxGroups != null && this.groups.length < maxGroups) || (maxGroups == null && pendingXSize <= maxXSize);
 					
-					if (canAppend)
+					if (canAppend || curGroup == null)
 					{
 						appendGroup()
 						groupSpace[curGroup] = entryXSize;
