@@ -14,7 +14,7 @@ Resize the window to see the responsiveness of the system.
 
 
 <b>Why use it?</b>
-Cascading Style Sheets (CSS), the standard method of structuring in web applications, simply doesn't cut it. Not only does CSS lack several important capabilities, it is also implemented inconsistently accross platforms, and is not re-implemented often enough to keep up with the fast-paced evolution of the web. The result is is that in order to achieve relatively simple layout structures, often one must implement a long series of hacks and workarounds that increases development time and ultimately leads to fragile, difficult-to-maintain applications.
+Not only does CSS lack several important capabilities, it is also implemented inconsistently accross platforms, and is not re-implemented often enough to keep up with the fast-paced evolution of the web. The result is is that in order to achieve relatively simple layout structures, often one must implement a long series of hacks and workarounds that increases development time and ultimately leads to fragile, difficult-to-maintain applications. Yule was designed to address these issues.
 
 Consider that one cannot do the following (reliably accross platforms) using CSS alone:
 
@@ -29,7 +29,7 @@ Consider that one cannot do the following (reliably accross platforms) using CSS
 <b>How does it work?</b>
 Yule works by bypassing CSS for structure-related styling. It manually positions elements on the screen using absolutely positioned, non-nested divs with absolute widths and heights; therefore, yule structures are virtually guaranteed to render equally across browsers and platforms.
 
-With CSS came the concept of separation of content and style. The concept behind yule is a further separation of style and structure. Therefore, a web page powered by yule is comprised of three components:
+A web page powered by yule is comprised of three components:
 
 1. An HTML file containing all content in logical order.
 2. An XML file specifying how that content should be arranged on the page.
