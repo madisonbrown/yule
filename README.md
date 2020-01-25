@@ -9,6 +9,7 @@ Here are some examples:
 <li><a href="https://scratchspace.org/yule/example/index.html">Example 1</a></li>
 <li><a href="https://scratchspace.org/yule/example/stacktest.html">Example 2</a></li>
 </ul>
+
 Resize the window to test the responsiveness of the system.
 
 <b>Why use it?</b>
