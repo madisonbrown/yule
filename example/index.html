@@ -12,16 +12,12 @@
 			document.getElementById("remove").style.display = "none";
 			
 			page.inflate('page1.xml', document, document.body);
-			render();
 	 	}
-		function render(){
-			page.renderToScope();
-		}
 		var page = new Yule.Frame();
     </script>
   </head>
   
-  <body onresize="render();">
+  <body onresize="page.renderToScope();">
       <div id="header">the two squares on either side consume 50px width. this header fills the remaining width.</div>
       <div id="leftcolumn">the center column consumes 500px of the available width in this container. this column consumes half of the remaining width.</div>
       <div id="box1">align</div>

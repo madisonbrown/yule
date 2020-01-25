@@ -10,14 +10,10 @@
     <script>
 		function init(){
 			page.inflate('page2.xml', document, document.body);
-			render();
 	 	}
-		function render(){
-			page.renderToScope();
-		}
 		var page = new Yule.Frame();
     </script>
   </head>
   
-  <body onload="init();" onresize="render();"></body>
+  <body onload="init();" onresize="page.renderToScope();"></body>
 </html>

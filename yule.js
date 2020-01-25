@@ -14,12 +14,14 @@ var calcs = 0;
 function Yule(){};
 
 Yule.XMLHelper = function(){};
-Yule.XMLHelper.parse = function(xmlFile){
-	var xmlhttp = new XMLHttpRequest();
-	xmlhttp.open("GET", xmlFile, false);
-	xmlhttp.send();
-	
-	return xmlhttp.responseXML;
+Yule.XMLHelper.parse = function(xmlFile, callback){
+	var xhr = new XMLHttpRequest();
+	xhr.onreadystatechange = function() {
+		if (this.readyState == 4 && this.status == 200)
+			callback(xhr.responseXML);
+	};
+	xhr.open("GET", xmlFile, true);
+	xhr.send(null);
 };
 
 Yule.Frame = function(){
@@ -27,9 +29,11 @@ Yule.Frame = function(){
 	this.scope = null;
 };
 Yule.Frame.prototype.inflate = function(xmlFile, document, scope){
-	this.build(Yule.XMLHelper.parse(xmlFile), document, scope);
-	
-	return this;
+	var _this = this;
+	Yule.XMLHelper.parse(xmlFile, function(data){ 
+		_this.build(data, document, scope); 
+		_this.renderToScope();
+	});
 };
 Yule.Frame.prototype.build = function(xmlDoc, document, scope){
 	this.scope = scope;
