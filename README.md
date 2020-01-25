@@ -2,7 +2,14 @@ yule
 ====
 
 <b>What is yule?</b>
-Yule is a lightweight, layout engine developed in javascript that provides consitent, intrinsically-cross-platform structuring to web applications.
+Yule is a lightweight, javascript layout engine that provides consitent, intrinsically-cross-platform structuring to web applications.
+
+Here are some examples:
+<ul>
+<li><a href="https://scratchspace.org/yule/example/index.html">Example 1</a></li>
+<li><a href="https://scratchspace.org/yule/example/stacktest.html">Example 2</a></li>
+</ul>
+Resize the window to test the responsiveness of the system.
 
 <b>Why use it?</b>
 Not only does CSS lack several important capabilities, it is also implemented inconsistently accross platforms, and is not re-implemented often enough to keep up with the fast-paced evolution of the web. The result is is that in order to achieve relatively simple layout structures, often one must implement a long series of hacks and workarounds that increases development time and ultimately leads to fragile, difficult-to-maintain applications. Yule was designed to address these issues.
